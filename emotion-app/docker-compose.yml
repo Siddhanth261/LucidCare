@@ -1,0 +1,13 @@
+# emotion-app/docker-compose.yml
+version: '3.8'
+
+services:
+  frontend:
+    build: .  # Builds from the current root folder
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app             # Maps your laptop folder to the container
+      - /app/node_modules  # CRITICAL: Uses container's node_modules, not your laptop's
+    environment:
+      - CHOKIDAR_USEPOLLING=true # Fixes hot-reload on Windows/Mac

@@ -156,7 +156,7 @@ LucidCare runs fully in Docker—no manual setup required.
 ### **1. Clone the repository**
 
 ```bash
-git clone https://github.com/your-repo/lucidcare.git
+git clone https://github.com/Siddhanth261/LucidCare.git
 ```
 
 ### **2. Navigate into the project**

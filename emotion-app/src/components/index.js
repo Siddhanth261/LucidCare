@@ -11,3 +11,7 @@ export { default as Drawer } from './Drawer';
 export { default as MenuButton } from './MenuButton';
 export { default as Dashboard } from './Dashboard';
 export { default as DiagnosticsPage } from './DiagnosticsPage';
+export { default as BillAnalysisPage } from './BillAnalysisPage';
+export { default as BillAnalyzer } from './BillAnalyzer';
+export { default as BillUploadCard } from './BillUploadCard';
+export { default as BillResults } from './BillResults';

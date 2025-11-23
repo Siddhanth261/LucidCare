@@ -4,6 +4,7 @@ import Drawer from './components/Drawer';
 import MenuButton from './components/MenuButton';
 import Dashboard from './components/Dashboard';
 import DiagnosticsPage from './components/DiagnosticsPage';
+import BillAnalysisPage from './components/BillAnalysisPage';
 import { useFaceDetection } from './hooks/useFaceDetection';
 import { useEmotionTracking } from './hooks/useEmotionTracking';
 import { useWebSocket } from './hooks/useWebSocket';
@@ -76,6 +77,10 @@ function App() {
           summary={summary}
           isAnalyzing={isAnalyzing}
         />
+      </div>
+
+      <div style={{ display: currentPage === 'billanalysis' ? 'block' : 'none' }}>
+        <BillAnalysisPage />
       </div>
     </div>
   );

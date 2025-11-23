@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, FileText, X, Menu } from 'lucide-react';
+import { Home, FileText, X, Menu, Receipt } from 'lucide-react';
 
 function Drawer({ isOpen, onClose, onNavigate, currentPage }) {
   return (
@@ -58,6 +58,17 @@ function Drawer({ isOpen, onClose, onNavigate, currentPage }) {
           >
             <FileText size={20} />
             <span>Run Diagnostics</span>
+          </button>
+          <button
+            onClick={() => onNavigate("billanalysis")}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+              currentPage === "billanalysis"
+                ? "bg-indigo-50 text-indigo-700 font-medium"
+                : "text-slate-700 hover:bg-gray-100"
+            }`}
+          >
+            <Receipt size={20} />
+            <span>Bill Analyzer</span>
           </button>
         </nav>
 

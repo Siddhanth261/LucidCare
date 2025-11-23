@@ -1,24 +1,14 @@
 import React, { useState } from "react";
 import {
   Upload,
-  FileText,
-  AlertTriangle,
+  XCircle,
   CheckCircle2,
-  X,
-  Eye,
-  Download,
-  FileCheck,
-  Clock,
-  DollarSign,
-  Mail,
-  Send,
   ArrowRight,
   ArrowLeft,
   Copy,
-  XCircle,
-  PhoneCall,
+  Send,
+  X,
 } from "lucide-react";
-
 import BillingCallSimulator from "../components/BillingCallSimulator";
 
 function BillAnalyzer() {
@@ -31,7 +21,11 @@ function BillAnalyzer() {
   const [selectedIssues, setSelectedIssues] = useState(new Set());
   const [generatedEmail, setGeneratedEmail] = useState(null);
   const [emailLoading, setEmailLoading] = useState(false);
-  const [isCallOpen, setIsCallOpen] = useState(false); // ⭐ NEW
+
+  // NEW: call simulator state
+  const [showCallSim, setShowCallSim] = useState(false);
+  const [callScript, setCallScript] = useState([]);
+  const [callLoading, setCallLoading] = useState(false);
 
   const uploadAndAnalyze = async (selectedFile) => {
     if (!selectedFile) return alert("Upload a bill first!");
@@ -94,6 +88,8 @@ function BillAnalyzer() {
     setAppeal(null);
     setSelectedIssues(new Set());
     setGeneratedEmail(null);
+    setCallScript([]);
+    setShowCallSim(false);
   };
 
   const toggleIssueSelection = (issueIndex) => {
@@ -171,7 +167,7 @@ function BillAnalyzer() {
     }
   };
 
-  // Calculate total potential savings
+  // Calculate total potential savings (rough)
   const totalSavings = Array.from(selectedIssues)
     .map((index) => analysis?.potential_issues?.[index])
     .filter(Boolean)
@@ -181,11 +177,59 @@ function BillAnalyzer() {
       if (matches) {
         return sum + parseFloat(matches[0].replace("$", "").replace(",", ""));
       }
-      return sum + 50; // fallback estimate
+      return sum + 50; // default estimate
     }, 0)
     .toFixed(2);
 
-  // STEP 1 – Upload
+  // NEW: practice phone call using Gemini script
+  const handleStartCall = async () => {
+    if (!analysis) return;
+    if (!analysis.potential_issues || analysis.potential_issues.length === 0)
+      return;
+
+    setShowCallSim(true);
+    setCallLoading(true);
+
+    try {
+      const selectedIssueDetails =
+        selectedIssues.size > 0
+          ? Array.from(selectedIssues).map(
+              (idx) => analysis.potential_issues[idx]
+            )
+          : analysis.potential_issues.slice(0, 3); // fallback: first few issues
+
+      const res = await fetch("http://localhost:8080/simulate-billing-call", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          patient_info: analysis.patient_info,
+          provider_info: analysis.provider_info,
+          bill_info: analysis.bill_info,
+          issues: selectedIssueDetails,
+          max_turns: 10,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.turns) {
+        setCallScript(data.turns);
+      } else {
+        console.error("Call script error:", data);
+        alert("Could not generate call script. Try again.");
+        setShowCallSim(false);
+      }
+    } catch (err) {
+      console.error("Call simulation failed:", err);
+      alert("Call simulation failed. Try again.");
+      setShowCallSim(false);
+    } finally {
+      setCallLoading(false);
+    }
+  };
+
+  // --------------------------------------------------
+  // STEP 1 – UPLOAD
+  // --------------------------------------------------
   if (step === "upload") {
     return (
       <div className="min-h-screen bg-slate-50 p-6 lg:p-10">
@@ -264,28 +308,37 @@ function BillAnalyzer() {
     );
   }
 
-  // STEP 2 – Results
+  // --------------------------------------------------
+  // STEP 2 – RESULTS
+  // --------------------------------------------------
   if (step === "results") {
-    const disputableCount =
-      analysis?.potential_issues?.filter((i) => i.can_patient_dispute).length ||
-      0;
-
-    const selectedIssueObjects = Array.from(selectedIssues)
-      .map((i) => analysis?.potential_issues?.[i])
-      .filter(Boolean);
-
     return (
       <div className="min-h-screen bg-slate-50 p-6 lg:p-10">
         <div className="max-w-6xl mx-auto">
-          <header className="mb-8 flex flex-col gap-2">
-            <h1 className="text-3xl font-bold text-slate-900">Bill Analysis</h1>
-            <p className="text-slate-600">
-              Review what looks correct and which line items might be contestable.
-            </p>
+          <header className="mb-6 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-slate-900">
+                Bill Analysis
+              </h1>
+              <p className="text-slate-600 text-sm md:text-base">
+                Review what looks correct and which line items might be
+                contestable.
+              </p>
+            </div>
+
+            {analysis?.potential_issues?.length > 0 && (
+              <button
+                onClick={handleStartCall}
+                disabled={callLoading}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {callLoading ? "Preparing call..." : "Practice phone call"}
+              </button>
+            )}
           </header>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            {/* Bill Overview & Contact Info */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-20">
+            {/* Overview */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-3 bg-emerald-50">
                 <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
@@ -367,7 +420,9 @@ function BillAnalyzer() {
                             )}
                             {analysis.provider_info.billing_dept && (
                               <p>
-                                <span className="font-medium">Department:</span>{" "}
+                                <span className="font-medium">
+                                  Department:
+                                </span>{" "}
                                 {analysis.provider_info.billing_dept}
                               </p>
                             )}
@@ -404,7 +459,7 @@ function BillAnalyzer() {
               )}
             </div>
 
-            {/* Coding Issues */}
+            {/* Issues */}
             <div className="bg-white rounded-2xl border border-rose-200 shadow-sm overflow-hidden">
               <div className="px-5 py-4 border-b border-rose-100 flex items-center gap-3 bg-rose-50">
                 <div className="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center">
@@ -508,35 +563,6 @@ function BillAnalyzer() {
             </div>
           </div>
 
-          {/* Call simulator card */}
-          {analysis && (
-            <div className="max-w-6xl mx-auto mb-24">
-              <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-4 flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-slate-900 flex items-center justify-center">
-                    <PhoneCall className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-slate-900">
-                      Practice the phone call
-                    </div>
-                    <div className="text-xs text-slate-500">
-                      Simulate a call with the billing office using your real
-                      flagged issues so you know what to say.
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setIsCallOpen(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900 text-white text-xs font-medium hover:bg-slate-800"
-                >
-                  <PhoneCall className="w-4 h-4" />
-                  Simulate call
-                </button>
-              </div>
-            </div>
-          )}
-
           {/* Bottom action bar */}
           {analysis?.potential_issues?.some(
             (issue) => issue.can_patient_dispute
@@ -574,20 +600,20 @@ function BillAnalyzer() {
           )}
         </div>
 
-        {/* ⭐ Call Simulator Modal */}
-        {analysis && (
-          <BillingCallSimulator
-            open={isCallOpen}
-            onClose={() => setIsCallOpen(false)}
-            analysis={analysis}
-            selectedIssues={selectedIssueObjects}
-          />
-        )}
+        {/* Call simulator modal */}
+        <BillingCallSimulator
+          open={showCallSim}
+          onClose={() => setShowCallSim(false)}
+          analysis={analysis}
+          script={callScript}
+        />
       </div>
     );
   }
 
+  // --------------------------------------------------
   // STEP 3 – Draft appeal
+  // --------------------------------------------------
   return (
     <div className="min-h-screen bg-slate-50 p-6 lg:p-10">
       <div className="max-w-5xl mx-auto pb-24">

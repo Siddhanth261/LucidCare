@@ -9,15 +9,16 @@ function formatSeconds(secs) {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-export default function BillingCallSimulator({
-  open,
-  onClose,
-  analysis,
-  selectedIssues = [],
-}) {
+/**
+ * Props:
+ * - open: boolean
+ * - onClose: () => void
+ * - analysis: full bill analysis (for header only)
+ * - script: [{ speaker: "rep" | "user", text: string }]
+ */
+export default function BillingCallSimulator({ open, onClose, analysis, script = [] }) {
   const [seconds, setSeconds] = useState(0);
   const [transcript, setTranscript] = useState([]);
-  const [isRepThinking, setIsRepThinking] = useState(false);
   const timerRef = useRef(null);
   const bottomRef = useRef(null);
   const { speak } = useTTS();
@@ -27,135 +28,85 @@ export default function BillingCallSimulator({
     if (bottomRef.current) {
       bottomRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [transcript, isRepThinking]);
+  }, [transcript]);
 
-  // Reset + start timer when modal opens
+  // Timer + reset on open/close
   useEffect(() => {
     if (!open) {
       clearInterval(timerRef.current);
       setSeconds(0);
       setTranscript([]);
-      setIsRepThinking(false);
       return;
     }
 
     setSeconds(0);
     setTranscript([]);
-    setIsRepThinking(false);
 
     timerRef.current = setInterval(() => {
       setSeconds((t) => t + 1);
     }, 1000);
 
-    // Initial greeting (scripted for now)
-    const providerName = analysis?.provider_info?.name || "Billing Department";
-    const greeting = `Hi, this is the ${providerName} billing office. Thanks for calling. How can I help you today?`;
-    addMessage("rep", greeting, true);
-
     return () => {
       clearInterval(timerRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const addMessage = (speaker, text, speakAloud = false) => {
-    if (!text) return;
+  // Helper to append a message
+  const addMessage = (speaker, text) => {
     setTranscript((prev) => [...prev, { speaker, text }]);
-
-    if (speakAloud) {
-      const mode = speaker === "rep" ? "REP" : "PATIENT";
-      speak(text, mode);
-    }
   };
 
-  const callGeminiRep = async (updatedTranscript) => {
-    setIsRepThinking(true);
-    try {
-      const res = await fetch("http://localhost:8080/billing-call-turn", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          transcript: updatedTranscript,
-          analysis,
-          selectedIssues,
-        }),
-      });
+  // Auto-play the script using queued TTS
+  useEffect(() => {
+    if (!open) return;
+    if (!script || script.length === 0) return;
 
-      const data = await res.json();
-      if (data.error) {
-        console.error("Billing call Gemini error:", data.error);
-        addMessage(
-          "rep",
-          "I’m sorry, I’m having trouble pulling up your account right now. Could you try again in a moment?",
-          true
-        );
-      } else if (data.reply) {
-        addMessage("rep", data.reply, true);
-      }
-    } catch (err) {
-      console.error("Billing call request failed:", err);
-      addMessage(
-        "rep",
-        "I’m sorry, there seems to be a connection issue on our side. Please try again later.",
-        true
+    let cancelled = false;
+
+    const run = async () => {
+      // Optional: small "ring -> answer" intro
+      const providerName = analysis?.provider_info?.name || "Billing Department";
+      addMessage("rep", `Hi, this is the ${providerName} billing office. Thanks for calling.`,);
+      await speak(
+        `Hi, this is the ${providerName} billing office. Thanks for calling.`,
+        "BILLING_REP"
       );
-    } finally {
-      setIsRepThinking(false);
-    }
-  };
 
-  const sendPatientLine = async (userLine) => {
-    if (!userLine) return;
-    const updatedTranscript = [...transcript, { speaker: "you", text: userLine }];
-    setTranscript(updatedTranscript);
-    // Speak the patient's line in a slightly different male-ish voice mode
-    speak(userLine, "PATIENT");
-    await callGeminiRep(updatedTranscript);
-  };
+      for (let i = 0; i < script.length; i++) {
+        if (cancelled) break;
+        const turn = script[i];
+        const speaker = turn.speaker === "user" ? "you" : "rep";
+        const text = turn.text || "";
 
-  const mainIssue =
-    selectedIssues && selectedIssues.length > 0
-      ? selectedIssues[0]
-      : null;
+        addMessage(speaker, text);
 
-  const handleUserSayIntro = () => {
-    const line =
-      "Hi, I’m calling because I have some questions and concerns about a few charges on my recent bill.";
-    sendPatientLine(line);
-  };
+        if (turn.speaker === "rep") {
+          await speak(text, "BILLING_REP");
+        } else {
+          await speak(text, "BILLING_USER");
+        }
+      }
 
-  const handleUserExplainIssues = () => {
-    let issueText = "a few specific line items that look incorrect.";
+      if (!cancelled) {
+        // Small pause then auto-end
+        addMessage("rep", "Thanks for calling. We’ll review your concerns and follow up with an updated bill or written response.");
+        await speak(
+          "Thanks for calling. We’ll review your concerns and follow up with an updated bill or written response.",
+          "BILLING_REP"
+        );
+        setTimeout(() => {
+          onClose();
+        }, 800);
+      }
+    };
 
-    if (mainIssue) {
-      const codeList = (mainIssue.codes || []).join(", ");
-      issueText = `the charges related to codes ${codeList}, which seem like they might be ${mainIssue.issue_type || "incorrectly coded"}.`;
-    }
+    run();
 
-    const userLine = `I’m disputing ${issueText} I’d like to understand why they were billed this way and whether they can be adjusted.`;
-    sendPatientLine(userLine);
-  };
-
-  const handleUserAskAdjustment = () => {
-    const userLine =
-      "If the review confirms these shouldn’t have been billed this way, what can you do to fix the charges?";
-    sendPatientLine(userLine);
-  };
-
-  const handleUserMentionLetter = () => {
-    const userLine =
-      "I’ve prepared a written appeal outlining these issues. Where should I send it so it gets to the right team?";
-    sendPatientLine(userLine);
-  };
-
-  const handleEndCall = () => {
-    const goodbye =
-      "Thank you for calling. We’ll review your concerns and follow up with an updated bill or written response. Have a good day.";
-    addMessage("rep", goodbye, true);
-    setTimeout(() => {
-      onClose();
-    }, 1500);
-  };
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, script]);
 
   if (!open) return null;
 
@@ -222,75 +173,28 @@ export default function BillingCallSimulator({
               )}
             </div>
           ))}
-
-          {isRepThinking && (
-            <div className="flex justify-start mb-3">
-              <div className="flex items-start gap-2 max-w-[80%]">
-                <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0">
-                  <Building2 className="w-4 h-4 text-white" />
-                </div>
-                <div className="bg-white border border-slate-200 rounded-2xl rounded-tl-sm px-3 py-2 text-xs text-slate-500 italic">
-                  Rep is reviewing your account…
-                </div>
-              </div>
-            </div>
-          )}
-
           <div ref={bottomRef} />
         </div>
 
-        {/* Controls */}
+        {/* Footer */}
         <div className="px-5 py-4 border-t border-slate-200 bg-white space-y-3">
           <div className="flex flex-wrap gap-2 text-[11px] text-slate-500">
             <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-100">
               <Volume2 className="w-3 h-3" />
-              Rep voice powered by your TTS
+              Two voices: rep (en_male_1) &amp; patient (en_male_2)
             </span>
-            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-100">
-              Patient lines are also spoken with a separate male voice style
+            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 text-emerald-700">
+              Fully simulated practice call – no real dialing
             </span>
-            {selectedIssues.length > 0 && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 text-emerald-700">
-                {selectedIssues.length} issue
-                {selectedIssues.length > 1 ? "s" : ""} referenced in this call
-              </span>
-            )}
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={handleUserSayIntro}
-              className="text-xs px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800 text-left"
-            >
-              “I’m calling about some charges…”
-            </button>
-            <button
-              onClick={handleUserExplainIssues}
-              className="text-xs px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800 text-left"
-            >
-              Explain which line items you’re disputing
-            </button>
-            <button
-              onClick={handleUserAskAdjustment}
-              className="text-xs px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800 text-left"
-            >
-              Ask: “What can you do to fix this?”
-            </button>
-            <button
-              onClick={handleUserMentionLetter}
-              className="text-xs px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800 text-left"
-            >
-              Mention your written appeal letter
-            </button>
-          </div>
-
-          <div className="flex justify-between items-center mt-2">
+          <div className="flex justify-between items-center">
             <div className="text-[11px] text-slate-500">
               This is a <span className="font-semibold">simulated</span> call
               for practice only.
             </div>
             <button
-              onClick={handleEndCall}
+              onClick={onClose}
               className="inline-flex items-center gap-1 px-3 py-2 rounded-full bg-rose-600 text-white text-xs font-medium hover:bg-rose-700"
             >
               <PhoneOff className="w-4 h-4" />

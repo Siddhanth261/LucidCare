@@ -403,3 +403,142 @@ async def tts_endpoint(body: TTSRequest):
     except Exception as e:
         print(f"TTS Exception: {str(e)}")
         return {"error": f"TTS failed: {str(e)}"}
+    
+    ###############################################
+# 7️⃣ BILL ANALYZER ENDPOINT (CPT/ICD/HCPCS)
+###############################################
+
+import json
+
+@app.post("/analyze-bill")
+async def analyze_bill(file: UploadFile = File(...)):
+    """
+    Upload a US medical bill (PDF).
+    We extract text and ask Gemini to:
+    - identify CPT / ICD-10 / HCPCS / Revenue codes
+    - detect duplicate charges
+    - check for upcoding or unbundling
+    - find clerical mistakes or coverage errors
+    - generate structured JSON
+    """
+
+    if not GOOGLE_API_KEY:
+        return {"error": "GEMINI_API_KEY missing"}
+
+    if not file.filename.lower().endswith(".pdf"):
+        return {"error": "Only PDF files allowed"}
+
+    try:
+        pdf_bytes = await file.read()
+        reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
+        text = ""
+
+        for p in reader.pages:
+            part = p.extract_text()
+            if part:
+                text += part + "\n"
+
+        text = text[:15000]  # safety limit
+
+        prompt = f"""
+You are a US medical billing expert.
+Analyze the bill text below.
+
+Your job:
+- Identify CPT, ICD-10, HCPCS, revenue codes.
+- Detect any:
+  - duplicate charges
+  - unbundling
+  - upcoding
+  - clerical mistakes
+  - medically unnecessary charges
+- Return ONLY JSON in this exact format:
+
+{{
+  "high_level_summary": "string",
+  "potential_issues": [
+    {{
+      "line_snippet": "string from bill",
+      "codes": ["CPT/ICD/HCPCS"],
+      "issue_type": "duplicate | upcoding | unbundling | clerical | unnecessary | other",
+      "patient_impact": "why this matters financially",
+      "can_patient_dispute": true,
+      "dispute_rationale": "why disputable"
+    }}
+  ]
+}}
+
+Bill text:
+{text}
+"""
+
+        response = model.generate_content(prompt)
+        raw = response.text
+
+        # Try to parse JSON safely
+        try:
+            parsed = json.loads(raw)
+            return {"structured": True, "analysis": parsed}
+        except:
+            import re
+            match = re.search(r"{[\s\S]*}", raw)
+            if match:
+                parsed = json.loads(match.group(0))
+                return {"structured": True, "analysis": parsed}
+
+        return {"structured": False, "raw": raw}
+
+    except Exception as e:
+        return {"error": str(e)}
+    
+    ###############################################
+# 8️⃣ APPEAL LETTER GENERATOR
+###############################################
+
+from pydantic import BaseModel
+
+class AppealRequest(BaseModel):
+    patient_name: str | None = None
+    provider_name: str | None = None
+    bill_date: str | None = None
+    account_number: str | None = None
+    analysis: dict | None = None
+    issues_summary: str | None = None
+    tone: str = "firm-but-polite"
+
+@app.post("/draft-appeal-letter")
+async def draft_appeal_letter(body: AppealRequest):
+    """
+    Generates a professional medical bill dispute letter.
+    Uses the structured output from /analyze-bill.
+    """
+
+    if not GOOGLE_API_KEY:
+        return {"error": "Gemini key missing"}
+
+    prompt = f"""
+Write a formal, firm-but-polite dispute letter for incorrect medical billing.
+
+Patient: {body.patient_name}
+Provider: {body.provider_name}
+Bill date: {body.bill_date}
+Account number: {body.account_number}
+
+Here is the analysis of the billing issues to reference:
+{json.dumps(body.analysis, indent=2)}
+
+Extra notes from the patient:
+{body.issues_summary}
+
+Tone: {body.tone}
+
+Write 4–6 paragraphs.  
+Be factual, respectful, and not emotional.  
+"""
+
+    try:
+        response = model.generate_content(prompt)
+        return {"letter": response.text}
+    except Exception as e:
+        return {"error": str(e)}
+

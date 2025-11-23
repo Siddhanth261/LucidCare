@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { Upload, FileText, AlertTriangle, CheckCircle2, X, Eye, Download, FileCheck, Clock, DollarSign, Mail, Send } from "lucide-react";
+import { Upload, FileText, AlertTriangle, CheckCircle2, X, Eye, Download, FileCheck, Clock, DollarSign, Mail, Send, ArrowRight, ArrowLeft, Copy, XCircle } from "lucide-react";
 
 function BillAnalyzer() {
+  const [step, setStep] = useState("upload"); // 'upload' | 'results' | 'draft'
   const [file, setFile] = useState(null);
   const [analysis, setAnalysis] = useState(null);
   const [appeal, setAppeal] = useState(null);
@@ -11,14 +12,14 @@ function BillAnalyzer() {
   const [generatedEmail, setGeneratedEmail] = useState(null);
   const [emailLoading, setEmailLoading] = useState(false);
 
-  const uploadAndAnalyze = async () => {
-    if (!file) return alert("Upload a bill first!");
+  const uploadAndAnalyze = async (selectedFile) => {
+    if (!selectedFile) return alert("Upload a bill first!");
 
     setLoading(true);
 
     try {
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", selectedFile);
 
       const res = await fetch("http://localhost:8080/analyze-bill", {
         method: "POST",
@@ -28,6 +29,7 @@ function BillAnalyzer() {
       const data = await res.json();
       setAnalysis(data.analysis);
       setAppeal(data.appeal);
+      setStep("results");
     } catch (error) {
       console.error("Analysis failed:", error);
       alert("Analysis failed. Please try again.");
@@ -36,11 +38,22 @@ function BillAnalyzer() {
     }
   };
 
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+      uploadAndAnalyze(selectedFile);
+    }
+  };
+
   const handleDrop = (e) => {
     e.preventDefault();
     setDragOver(false);
     const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile) setFile(droppedFile);
+    if (droppedFile) {
+      setFile(droppedFile);
+      uploadAndAnalyze(droppedFile);
+    }
   };
 
   const handleDragOver = (e) => {
@@ -53,7 +66,8 @@ function BillAnalyzer() {
     setDragOver(false);
   };
 
-  const removeFile = () => {
+  const resetAnalysis = () => {
+    setStep("upload");
     setFile(null);
     setAnalysis(null);
     setAppeal(null);
@@ -101,6 +115,7 @@ function BillAnalyzer() {
 
       const data = await response.json();
       setGeneratedEmail(data.letter);
+      setStep("draft");
     } catch (error) {
       console.error("Email generation failed:", error);
       alert("Failed to generate email. Please try again.");
@@ -112,401 +127,371 @@ function BillAnalyzer() {
   const openMailto = () => {
     if (!generatedEmail) return;
     
-    const subject = encodeURIComponent("Medical Bill Dispute - Account [Account Number]");
+    const subject = encodeURIComponent("Medical Bill Dispute - Account Number");
     const body = encodeURIComponent(generatedEmail);
     const mailtoLink = `mailto:?subject=${subject}&body=${body}`;
     
     window.open(mailtoLink);
   };
 
-  return (
-    <div className="space-y-8">
-      {/* Upload Section */}
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-        <div className="bg-gradient-to-r from-gray-900 to-gray-700 px-8 py-6">
-          <div className="text-2xl font-bold text-white mb-2">Upload Your Medical Bill</div>
-          <p className="text-gray-300">Drag and drop your bill or click to browse files</p>
-        </div>
-        
-        <div className="p-8">
-          {!file ? (
-            <div
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              className={`border-3 border-dashed rounded-2xl p-12 text-center transition-all duration-300 ${
-                dragOver 
-                  ? "border-blue-400 bg-blue-50 scale-105" 
-                  : "border-gray-300 hover:border-gray-400 hover:bg-gray-50"
-              }`}
-            >
-              <div className="max-w-md mx-auto">
-                <div className={`inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-6 transition-all duration-300 ${
-                  dragOver ? "bg-blue-100" : "bg-gray-100"
-                }`}>
-                  <Upload size={40} className={dragOver ? "text-blue-600" : "text-gray-600"} />
-                </div>
-                
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">
-                  {dragOver ? "Drop your file here" : "Choose or drag your file"}
-                </h3>
-                
-                <p className="text-gray-600 mb-6 leading-relaxed">
-                  Upload your medical bill in PDF, JPG, or PNG format. Our AI will analyze it for errors and potential savings.
-                </p>
-                
-                <input
-                  type="file"
-                  accept="application/pdf,.jpg,.jpeg,.png"
-                  onChange={(e) => setFile(e.target.files[0])}
-                  className="hidden"
-                  id="file-upload"
-                />
-                
-                <label
-                  htmlFor="file-upload"
-                  className="inline-flex items-center gap-3 px-8 py-4 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-all duration-200 cursor-pointer font-medium shadow-lg hover:shadow-xl"
-                >
-                  <FileText size={20} />
-                  Select File
-                </label>
-                
-                <p className="text-sm text-gray-500 mt-4">Maximum file size: 10MB</p>
-              </div>
-            </div>
-          ) : (
-            <div className="max-w-lg mx-auto">
-              {/* File Preview Card */}
-              <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-xl p-6 mb-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-white rounded-xl shadow-sm">
-                      <FileCheck size={24} className="text-green-600" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900">{file.name}</h4>
-                      <p className="text-sm text-gray-600">
-                        {(file.size / 1024 / 1024).toFixed(2)} MB • Ready for analysis
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={removeFile}
-                    className="p-2 hover:bg-red-100 text-red-500 rounded-lg transition-all duration-200"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
-              </div>
-              
-              {/* Analyze Button */}
-              <button
-                onClick={uploadAndAnalyze}
-                disabled={loading}
-                className={`w-full py-4 px-6 rounded-xl font-semibold text-lg transition-all duration-200 flex items-center justify-center gap-3 ${
-                  loading
-                    ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                    : "bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl"
-                }`}
-              >
-                {loading ? (
-                  <>
-                    <div className="w-6 h-6 border-2 border-gray-400 border-t-gray-600 rounded-full animate-spin"></div>
-                    <span>Analyzing Your Bill...</span>
-                  </>
-                ) : (
-                  <>
-                    <Eye size={20} />
-                    <span>Analyze Bill</span>
-                  </>
-                )}
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+  const copyAppealToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(generatedEmail);
+      alert("Appeal letter copied to clipboard.");
+    } catch {
+      alert("Could not copy text. Please copy manually.");
+    }
+  };
 
-      {/* Analysis Results */}
-      {(analysis || loading) && (
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6">
-            <div className="text-2xl font-bold text-white mb-2">Analysis Results</div>
-            <p className="text-blue-100">Detailed breakdown of your medical bill</p>
-          </div>
-          
-          <div className="p-8">
+  // Calculate total potential savings
+  const totalSavings = Array.from(selectedIssues)
+    .map(index => analysis?.potential_issues?.[index])
+    .filter(Boolean)
+    .reduce((sum, issue) => {
+      // Try to extract dollar amounts from patient_impact or dispute_rationale
+      const text = `${issue.patient_impact} ${issue.dispute_rationale}`;
+      const matches = text.match(/\$[\d,]+\.?\d*/g);
+      if (matches) {
+        return sum + parseFloat(matches[0].replace('$', '').replace(',', ''));
+      }
+      return sum + 50; // Default estimated savings per issue
+    }, 0)
+    .toFixed(2);
+
+  // Step 1 – Upload
+  if (step === "upload") {
+    return (
+      <div className="min-h-screen bg-slate-50 p-6 lg:p-10">
+        <div className="max-w-5xl mx-auto">
+          <header className="mb-10">
+            <h1 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-2">
+              Bill Analysis
+            </h1>
+            <p className="text-slate-600 text-base lg:text-lg">
+              Upload your medical bill to detect coding issues you can question
+              and use an AI-drafted appeal letter to push back.
+            </p>
+          </header>
+
+          <div
+            className={`mt-16 border-2 border-dashed rounded-3xl p-10 lg:p-16 text-center transition-all duration-300 bg-white shadow-sm cursor-pointer ${
+              loading
+                ? "border-emerald-400 bg-emerald-50/40"
+                : dragOver
+                ? "border-blue-400 bg-blue-50 scale-105"
+                : "border-slate-200 hover:border-slate-400 hover:bg-slate-50"
+            }`}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onClick={() => !loading && document.getElementById("bill-upload-input")?.click()}
+          >
+            <input
+              id="bill-upload-input"
+              type="file"
+              accept=".pdf,.png,.jpg,.jpeg"
+              className="hidden"
+              onChange={handleFileChange}
+              disabled={loading}
+            />
+
             {loading ? (
-              <div className="text-center py-16">
-                <div className="inline-flex items-center justify-center w-20 h-20 bg-blue-100 rounded-2xl mb-6">
-                  <div className="w-10 h-10 border-3 border-blue-300 border-t-blue-600 rounded-full animate-spin"></div>
+              <div className="flex flex-col items-center gap-4">
+                <div className="relative w-16 h-16 mb-2">
+                  <div className="absolute inset-0 rounded-full border-4 border-slate-200" />
+                  <div className="absolute inset-0 rounded-full border-4 border-t-emerald-500 animate-spin" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">Processing Your Bill</h3>
-                <p className="text-gray-600 max-w-md mx-auto">
-                  Our AI is carefully analyzing your medical bill for errors, overcharges, and opportunities for savings.
+                <h2 className="text-xl font-semibold text-slate-900">
+                  Analyzing your bill…
+                </h2>
+                <p className="text-slate-600 text-sm">
+                  Cross-checking codes against common CPT/HCPCS patterns.
                 </p>
               </div>
             ) : (
-              <div className="space-y-8">
-                {/* Executive Summary */}
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <FileText size={24} className="text-blue-600" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-blue-900 mb-3">Executive Summary</h3>
-                      <p className="text-blue-800 leading-relaxed">{analysis.high_level_summary}</p>
-                    </div>
-                  </div>
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-20 h-20 rounded-3xl bg-slate-100 flex items-center justify-center border border-slate-200 mb-2">
+                  <Upload className="w-10 h-10 text-slate-400" />
                 </div>
-
-                {/* Extracted Contact Details */}
-                {(analysis.patient_info || analysis.provider_info || analysis.bill_info) && (
-                  <div className="bg-gradient-to-br from-gray-50 to-slate-50 border border-gray-200 rounded-xl p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">📋 Extracted Bill Information</h3>
-                    <div className="grid md:grid-cols-3 gap-6">
-                      {/* Patient Info */}
-                      {analysis.patient_info && (
-                        <div className="bg-white rounded-lg p-4 border border-gray-200">
-                          <h4 className="font-medium text-gray-900 mb-3">Patient Information</h4>
-                          <div className="space-y-2 text-sm">
-                            {analysis.patient_info.name && <p><span className="font-medium">Name:</span> {analysis.patient_info.name}</p>}
-                            {analysis.patient_info.address && <p><span className="font-medium">Address:</span> {analysis.patient_info.address}</p>}
-                            {analysis.patient_info.city_state_zip && <p><span className="font-medium">City/State:</span> {analysis.patient_info.city_state_zip}</p>}
-                            {analysis.patient_info.phone && <p><span className="font-medium">Phone:</span> {analysis.patient_info.phone}</p>}
-                            {analysis.patient_info.email && <p><span className="font-medium">Email:</span> {analysis.patient_info.email}</p>}
-                            {analysis.patient_info.account_number && <p><span className="font-medium">Account #:</span> {analysis.patient_info.account_number}</p>}
-                            {analysis.patient_info.dob && <p><span className="font-medium">DOB:</span> {analysis.patient_info.dob}</p>}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Provider Info */}
-                      {analysis.provider_info && (
-                        <div className="bg-white rounded-lg p-4 border border-gray-200">
-                          <h4 className="font-medium text-gray-900 mb-3">Provider Information</h4>
-                          <div className="space-y-2 text-sm">
-                            {analysis.provider_info.name && <p><span className="font-medium">Name:</span> {analysis.provider_info.name}</p>}
-                            {analysis.provider_info.billing_dept && <p><span className="font-medium">Department:</span> {analysis.provider_info.billing_dept}</p>}
-                            {analysis.provider_info.address && <p><span className="font-medium">Address:</span> {analysis.provider_info.address}</p>}
-                            {analysis.provider_info.city_state_zip && <p><span className="font-medium">City/State:</span> {analysis.provider_info.city_state_zip}</p>}
-                            {analysis.provider_info.phone && <p><span className="font-medium">Phone:</span> {analysis.provider_info.phone}</p>}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Bill Info */}
-                      {analysis.bill_info && (
-                        <div className="bg-white rounded-lg p-4 border border-gray-200">
-                          <h4 className="font-medium text-gray-900 mb-3">Bill Details</h4>
-                          <div className="space-y-2 text-sm">
-                            {analysis.bill_info.bill_date && <p><span className="font-medium">Bill Date:</span> {analysis.bill_info.bill_date}</p>}
-                            {analysis.bill_info.due_date && <p><span className="font-medium">Due Date:</span> {analysis.bill_info.due_date}</p>}
-                            {analysis.bill_info.total_amount && <p><span className="font-medium">Total Amount:</span> {analysis.bill_info.total_amount}</p>}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    <div className="mt-4 p-3 bg-green-100 border border-green-200 rounded-lg">
-                      <p className="text-sm text-green-800">
-                        ✅ <strong>Auto-detected:</strong> This information will be automatically included in your dispute letter.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Issues Found */}
-                {analysis.potential_issues?.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="p-2 bg-red-100 rounded-lg">
-                        <AlertTriangle size={24} className="text-red-600" />
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-semibold text-gray-900">Issues Identified</h3>
-                        <p className="text-gray-600">{analysis.potential_issues.length} potential problems found</p>
-                      </div>
-                    </div>
-                    
-                    <div className="grid gap-6">
-                      {analysis.potential_issues.map((issue, idx) => (
-                        <div key={idx} className={`bg-gradient-to-br border rounded-xl p-6 transition-all duration-200 ${
-                          selectedIssues.has(idx) 
-                            ? "from-blue-50 to-indigo-50 border-blue-300 ring-2 ring-blue-200" 
-                            : "from-red-50 to-orange-50 border-red-200 hover:border-red-300"
-                        }`}>
-                          <div className="flex items-start justify-between mb-4">
-                            <div className="flex items-center gap-3">
-                              {issue.can_patient_dispute && (
-                                <label className="flex items-center cursor-pointer">
-                                  <input
-                                    type="checkbox"
-                                    checked={selectedIssues.has(idx)}
-                                    onChange={() => toggleIssueSelection(idx)}
-                                    className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                                  />
-                                  <span className="ml-2 text-sm text-gray-700 font-medium">Select for dispute</span>
-                                </label>
-                              )}
-                              <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium">
-                                Issue #{idx + 1}
-                              </span>
-                              <span className="px-3 py-1 bg-white/80 text-gray-700 rounded-full text-sm font-medium">
-                                {issue.issue_type}
-                              </span>
-                            </div>
-                            <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                              issue.can_patient_dispute
-                                ? "bg-green-100 text-green-800"
-                                : "bg-gray-100 text-gray-600"
-                            }`}>
-                              {issue.can_patient_dispute ? "Disputable" : "Non-disputable"}
-                            </div>
-                          </div>
-                          
-                          <div className="grid md:grid-cols-2 gap-6">
-                            <div className="space-y-4">
-                              <div>
-                                <h4 className="font-medium text-gray-900 mb-2">Line Item</h4>
-                                <p className="text-gray-700 bg-white/60 rounded-lg p-3">{issue.line_snippet}</p>
-                              </div>
-                              <div>
-                                <h4 className="font-medium text-gray-900 mb-2">Medical Codes</h4>
-                                <p className="text-gray-700 bg-white/60 rounded-lg p-3">
-                                  {issue.codes?.join(", ") || "N/A"}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="space-y-4">
-                              <div>
-                                <h4 className="font-medium text-gray-900 mb-2">Patient Impact</h4>
-                                <p className="text-gray-700 bg-white/60 rounded-lg p-3">{issue.patient_impact}</p>
-                              </div>
-                              <div>
-                                <h4 className="font-medium text-gray-900 mb-2">Dispute Rationale</h4>
-                                <p className="text-gray-700 bg-white/60 rounded-lg p-3 leading-relaxed">
-                                  {issue.dispute_rationale}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    
-                    {/* Dispute Actions */}
-                    {analysis.potential_issues.some(issue => issue.can_patient_dispute) && (
-                      <div className="mt-8 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
-                        <div className="flex items-center justify-between mb-4">
-                          <div>
-                            <h3 className="text-lg font-semibold text-blue-900">Dispute Selected Issues</h3>
-                            <p className="text-blue-700">
-                              {selectedIssues.size} of {analysis.potential_issues.filter(issue => issue.can_patient_dispute).length} disputable issues selected
-                            </p>
-                          </div>
-                          <button
-                            onClick={generateDisputeEmail}
-                            disabled={selectedIssues.size === 0 || emailLoading}
-                            className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
-                              selectedIssues.size === 0 || emailLoading
-                                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                                : "bg-blue-600 text-white hover:bg-blue-700 shadow-lg hover:shadow-xl"
-                            }`}
-                          >
-                            {emailLoading ? (
-                              <>
-                                <div className="w-4 h-4 border-2 border-gray-400 border-t-gray-600 rounded-full animate-spin"></div>
-                                Generating...
-                              </>
-                            ) : (
-                              <>
-                                <Mail size={18} />
-                                Generate Dispute Email
-                              </>
-                            )}
-                          </button>
-                        </div>
-                        
-                        {selectedIssues.size > 0 && (
-                          <div className="text-sm text-blue-800 bg-blue-100/50 rounded-lg p-3">
-                            <strong>Selected issues:</strong> {Array.from(selectedIssues).map(idx => `#${idx + 1}`).join(", ")}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                <h2 className="text-2xl font-semibold text-slate-900">
+                  {dragOver ? "Drop your file here" : "Upload your statement"}
+                </h2>
+                <p className="text-slate-600 max-w-md text-sm lg:text-base">
+                  Drag and drop a PDF or image of your bill, or click to browse
+                  files from your device.
+                </p>
+                {file && (
+                  <p className="mt-2 text-xs text-slate-500">
+                    Last selected: <span className="font-medium">{file.name}</span>
+                  </p>
                 )}
               </div>
             )}
           </div>
         </div>
-      )}
+      </div>
+    );
+  }
 
-      {/* Generated Dispute Email */}
-      {generatedEmail && (
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-          <div className="bg-gradient-to-r from-green-600 to-green-700 px-8 py-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl font-bold text-white mb-2">Dispute Email Ready</div>
-                <p className="text-green-100">Professional dispute letter for selected issues</p>
+  // Step 2 – Results
+  if (step === "results") {
+    return (
+      <div className="min-h-screen bg-slate-50 p-6 lg:p-10">
+        <div className="max-w-6xl mx-auto">
+          <header className="mb-8 flex flex-col gap-2">
+            <h1 className="text-3xl font-bold text-slate-900">Bill Analysis</h1>
+            <p className="text-slate-600">
+              Review what looks correct and which line items might be contestable.
+            </p>
+          </header>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-20">
+            {/* Bill Overview & Contact Info */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-3 bg-emerald-50">
+                <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-slate-900 text-sm">
+                    Bill Overview &amp; Information
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    AI summary and extracted details from your bill.
+                  </p>
+                </div>
               </div>
-              <button 
-                onClick={openMailto}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-white/20 backdrop-blur-sm text-white rounded-xl hover:bg-white/30 transition-all duration-200 font-medium"
-              >
-                <Send size={18} />
-                Open in Email App
-              </button>
-            </div>
-          </div>
-          
-          <div className="p-8">
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6">
-              <div className="mb-4">
-                <h4 className="font-semibold text-green-900 mb-2">Email Preview:</h4>
-                <p className="text-sm text-green-700 mb-4">
-                  Click "Open in Email App" to launch your default email client with this content pre-filled.
-                  You can then add the recipient's email address and make any necessary edits before sending.
+
+              <div className="p-5 border-b border-slate-100 bg-slate-50/60">
+                <h3 className="text-xs uppercase tracking-wide text-slate-500 font-semibold mb-2">Executive Summary</h3>
+                <p className="text-sm text-slate-700 leading-relaxed">
+                  {analysis?.high_level_summary || "No summary available."}
                 </p>
               </div>
-              <div className="prose prose-green max-w-none">
-                <pre className="whitespace-pre-wrap text-sm leading-relaxed text-gray-800 font-sans bg-white/60 rounded-lg p-4 border border-green-200">
-                  {generatedEmail}
-                </pre>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Appeal Letter */}
-      {appeal && (
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-          <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-8 py-6">
-            <div className="flex items-center justify-between">
+              {/* Extracted Contact Details */}
+              {(analysis?.patient_info || analysis?.provider_info || analysis?.bill_info) && (
+                <div className="p-5 space-y-4">
+                  <h3 className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Extracted Information</h3>
+                  
+                  <div className="grid gap-3">
+                    {analysis.patient_info && Object.keys(analysis.patient_info).some(key => analysis.patient_info[key]) && (
+                      <div className="bg-slate-50 rounded-lg p-3">
+                        <h4 className="text-xs font-semibold text-slate-900 mb-2">Patient Information</h4>
+                        <div className="space-y-1 text-xs text-slate-600">
+                          {analysis.patient_info.name && <p><span className="font-medium">Name:</span> {analysis.patient_info.name}</p>}
+                          {analysis.patient_info.account_number && <p><span className="font-medium">Account #:</span> {analysis.patient_info.account_number}</p>}
+                          {analysis.patient_info.dob && <p><span className="font-medium">DOB:</span> {analysis.patient_info.dob}</p>}
+                        </div>
+                      </div>
+                    )}
+
+                    {analysis.provider_info && Object.keys(analysis.provider_info).some(key => analysis.provider_info[key]) && (
+                      <div className="bg-slate-50 rounded-lg p-3">
+                        <h4 className="text-xs font-semibold text-slate-900 mb-2">Provider Information</h4>
+                        <div className="space-y-1 text-xs text-slate-600">
+                          {analysis.provider_info.name && <p><span className="font-medium">Name:</span> {analysis.provider_info.name}</p>}
+                          {analysis.provider_info.billing_dept && <p><span className="font-medium">Department:</span> {analysis.provider_info.billing_dept}</p>}
+                        </div>
+                      </div>
+                    )}
+
+                    {analysis.bill_info && Object.keys(analysis.bill_info).some(key => analysis.bill_info[key]) && (
+                      <div className="bg-slate-50 rounded-lg p-3">
+                        <h4 className="text-xs font-semibold text-slate-900 mb-2">Bill Details</h4>
+                        <div className="space-y-1 text-xs text-slate-600">
+                          {analysis.bill_info.bill_date && <p><span className="font-medium">Date:</span> {analysis.bill_info.bill_date}</p>}
+                          {analysis.bill_info.total_amount && <p><span className="font-medium">Total:</span> {analysis.bill_info.total_amount}</p>}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Coding Issues */}
+            <div className="bg-white rounded-2xl border border-rose-200 shadow-sm overflow-hidden">
+              <div className="px-5 py-4 border-b border-rose-100 flex items-center gap-3 bg-rose-50">
+                <div className="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center">
+                  <XCircle className="w-4 h-4 text-rose-600" />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-slate-900 text-sm">
+                    Coding Issues Detected
+                  </h2>
+                  <p className="text-xs text-rose-600 font-medium">
+                    {analysis?.potential_issues?.length || 0} line
+                    {(analysis?.potential_issues?.length || 0) === 1 ? "" : "s"} flagged for review
+                  </p>
+                </div>
+              </div>
+
+              {!analysis?.potential_issues?.length ? (
+                <div className="p-5 text-sm text-slate-500">
+                  No clear coding issues were detected. You can still use the
+                  summary to talk with your provider if something feels off.
+                </div>
+              ) : (
+                <div className="divide-y divide-rose-50">
+                  {analysis.potential_issues.map((issue, idx) => (
+                    <label
+                      key={idx}
+                      className={`block px-5 py-4 cursor-pointer transition-all border-l-4 ${
+                        selectedIssues.has(idx)
+                          ? "bg-rose-50 border-l-rose-500"
+                          : "bg-white hover:bg-slate-50 border-l-transparent"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        {issue.can_patient_dispute && (
+                          <input
+                            type="checkbox"
+                            className="mt-1 w-4 h-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500"
+                            checked={selectedIssues.has(idx)}
+                            onChange={() => toggleIssueSelection(idx)}
+                          />
+                        )}
+                        <div className="flex-1">
+                          <div className="flex justify-between items-start mb-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="px-2 py-0.5 rounded bg-rose-50 border border-rose-100 text-xs font-mono font-semibold text-rose-700">
+                                Issue #{idx + 1}
+                              </span>
+                              <span className="px-2 py-0.5 rounded bg-slate-100 text-xs font-medium text-slate-700">
+                                {issue.issue_type}
+                              </span>
+                            </div>
+                            <div className={`px-2 py-0.5 rounded text-xs font-medium ${
+                              issue.can_patient_dispute
+                                ? "bg-emerald-100 text-emerald-800"
+                                : "bg-slate-100 text-slate-600"
+                            }`}>
+                              {issue.can_patient_dispute ? "Disputable" : "Non-disputable"}
+                            </div>
+                          </div>
+
+                          <div className="bg-white border border-rose-100 rounded-lg p-3 text-xs text-slate-700 mb-2">
+                            <p className="uppercase tracking-wide text-[10px] text-rose-600 font-semibold mb-1">
+                              Line Item
+                            </p>
+                            <p className="mb-2">{issue.line_snippet}</p>
+                            
+                            <p className="uppercase tracking-wide text-[10px] text-rose-600 font-semibold mb-1">
+                              Why this might be incorrect
+                            </p>
+                            <p className="whitespace-pre-wrap mb-2">{issue.dispute_rationale}</p>
+                            
+                            <p className="uppercase tracking-wide text-[10px] text-rose-600 font-semibold mb-1">
+                              Financial Impact
+                            </p>
+                            <p>{issue.patient_impact}</p>
+                          </div>
+
+                          <div className="flex justify-between items-center text-xs">
+                            {issue.codes?.length > 0 && (
+                              <span className="text-slate-500">
+                                Codes: {issue.codes.join(", ")}
+                              </span>
+                            )}
+                            <span className="font-semibold text-emerald-600">
+                              Potential savings: ~$50-200
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Bottom action bar */}
+          {analysis?.potential_issues?.some(issue => issue.can_patient_dispute) && (
+            <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-white shadow-xl border border-slate-200 rounded-full px-6 py-3 flex items-center gap-6 max-w-full z-50">
               <div>
-                <div className="text-2xl font-bold text-white mb-2">Generated Appeal Letter</div>
-                <p className="text-purple-100">Professional letter ready for submission</p>
+                <div className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold">
+                  Charges under review
+                </div>
+                <div className="text-lg font-semibold text-emerald-600">
+                  ${totalSavings}
+                </div>
               </div>
-              <button className="inline-flex items-center gap-2 px-6 py-3 bg-white/20 backdrop-blur-sm text-white rounded-xl hover:bg-white/30 transition-all duration-200 font-medium">
-                <Download size={18} />
-                Download PDF
-              </button>
-            </div>
-          </div>
-          
-          <div className="p-8">
-            <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-6">
-              <div className="prose prose-purple max-w-none">
-                <pre className="whitespace-pre-wrap text-sm leading-relaxed text-gray-800 font-sans">
-                  {typeof appeal === "string" ? appeal : JSON.stringify(appeal, null, 2)}
-                </pre>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={resetAnalysis}
+                  className="text-xs px-3 py-2 rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50"
+                >
+                  Reset Analysis
+                </button>
+                <button
+                  onClick={generateDisputeEmail}
+                  disabled={selectedIssues.size === 0 || emailLoading}
+                  className={`text-xs px-4 py-2 rounded-full flex items-center gap-1 ${
+                    selectedIssues.size === 0 || emailLoading
+                      ? "bg-slate-200 text-slate-500 cursor-not-allowed"
+                      : "bg-slate-900 text-white hover:bg-slate-800"
+                  }`}
+                >
+                  {emailLoading ? "Generating..." : "Draft Appeal"}
+                  <ArrowRight className="w-3 h-3" />
+                </button>
               </div>
             </div>
-          </div>
+          )}
         </div>
-      )}
+      </div>
+    );
+  }
+
+  // Step 3 – Draft appeal
+  return (
+    <div className="min-h-screen bg-slate-50 p-6 lg:p-10">
+      <div className="max-w-5xl mx-auto pb-24">
+        <button
+          onClick={() => setStep("results")}
+          className="mb-6 flex items-center text-sm text-slate-600 hover:text-slate-900"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to analysis
+        </button>
+
+        <h1 className="text-3xl font-bold text-slate-900 mb-3">
+          Appeal letter draft
+        </h1>
+        <p className="text-slate-600 mb-6 text-sm">
+          You can edit this letter before copying and sending it to your
+          provider or insurance company.
+        </p>
+
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 mb-4">
+          <textarea
+            value={generatedEmail || ""}
+            onChange={(e) => setGeneratedEmail(e.target.value)}
+            className="w-full min-h-[400px] text-sm leading-relaxed border border-slate-200 rounded-xl p-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-vertical bg-slate-50"
+            placeholder="Your appeal letter will appear here..."
+          />
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={copyAppealToClipboard}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500 text-white text-sm font-semibold hover:bg-emerald-600"
+          >
+            <Copy className="w-4 h-4" />
+            Copy to clipboard
+          </button>
+          
+          <button 
+            onClick={openMailto}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800"
+          >
+            <Send className="w-4 h-4" />
+            Open in Email App
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

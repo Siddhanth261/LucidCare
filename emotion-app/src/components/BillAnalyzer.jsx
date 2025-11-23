@@ -1,5 +1,25 @@
 import React, { useState } from "react";
-import { Upload, FileText, AlertTriangle, CheckCircle2, X, Eye, Download, FileCheck, Clock, DollarSign, Mail, Send, ArrowRight, ArrowLeft, Copy, XCircle } from "lucide-react";
+import {
+  Upload,
+  FileText,
+  AlertTriangle,
+  CheckCircle2,
+  X,
+  Eye,
+  Download,
+  FileCheck,
+  Clock,
+  DollarSign,
+  Mail,
+  Send,
+  ArrowRight,
+  ArrowLeft,
+  Copy,
+  XCircle,
+  PhoneCall,
+} from "lucide-react";
+
+import BillingCallSimulator from "../components/BillingCallSimulator";
 
 function BillAnalyzer() {
   const [step, setStep] = useState("upload"); // 'upload' | 'results' | 'draft'
@@ -11,6 +31,7 @@ function BillAnalyzer() {
   const [selectedIssues, setSelectedIssues] = useState(new Set());
   const [generatedEmail, setGeneratedEmail] = useState(null);
   const [emailLoading, setEmailLoading] = useState(false);
+  const [isCallOpen, setIsCallOpen] = useState(false); // ⭐ NEW
 
   const uploadAndAnalyze = async (selectedFile) => {
     if (!selectedFile) return alert("Upload a bill first!");
@@ -93,25 +114,30 @@ function BillAnalyzer() {
 
     setEmailLoading(true);
     try {
-      const selectedIssueDetails = Array.from(selectedIssues).map(index => analysis.potential_issues[index]);
-      
-      const response = await fetch("http://localhost:8080/draft-appeal-letter", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          patient_info: analysis.patient_info,
-          provider_info: analysis.provider_info,
-          bill_info: analysis.bill_info,
-          analysis: {
-            high_level_summary: analysis.high_level_summary,
-            potential_issues: selectedIssueDetails
+      const selectedIssueDetails = Array.from(selectedIssues).map(
+        (index) => analysis.potential_issues[index]
+      );
+
+      const response = await fetch(
+        "http://localhost:8080/draft-appeal-letter",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-          issues_summary: `Selected ${selectedIssues.size} issues for dispute`,
-          tone: "firm-but-polite"
-        }),
-      });
+          body: JSON.stringify({
+            patient_info: analysis.patient_info,
+            provider_info: analysis.provider_info,
+            bill_info: analysis.bill_info,
+            analysis: {
+              high_level_summary: analysis.high_level_summary,
+              potential_issues: selectedIssueDetails,
+            },
+            issues_summary: `Selected ${selectedIssues.size} issues for dispute`,
+            tone: "firm-but-polite",
+          }),
+        }
+      );
 
       const data = await response.json();
       setGeneratedEmail(data.letter);
@@ -126,11 +152,13 @@ function BillAnalyzer() {
 
   const openMailto = () => {
     if (!generatedEmail) return;
-    
-    const subject = encodeURIComponent("Medical Bill Dispute - Account Number");
+
+    const subject = encodeURIComponent(
+      "Medical Bill Dispute - Account Number"
+    );
     const body = encodeURIComponent(generatedEmail);
     const mailtoLink = `mailto:?subject=${subject}&body=${body}`;
-    
+
     window.open(mailtoLink);
   };
 
@@ -145,20 +173,19 @@ function BillAnalyzer() {
 
   // Calculate total potential savings
   const totalSavings = Array.from(selectedIssues)
-    .map(index => analysis?.potential_issues?.[index])
+    .map((index) => analysis?.potential_issues?.[index])
     .filter(Boolean)
     .reduce((sum, issue) => {
-      // Try to extract dollar amounts from patient_impact or dispute_rationale
       const text = `${issue.patient_impact} ${issue.dispute_rationale}`;
       const matches = text.match(/\$[\d,]+\.?\d*/g);
       if (matches) {
-        return sum + parseFloat(matches[0].replace('$', '').replace(',', ''));
+        return sum + parseFloat(matches[0].replace("$", "").replace(",", ""));
       }
-      return sum + 50; // Default estimated savings per issue
+      return sum + 50; // fallback estimate
     }, 0)
     .toFixed(2);
 
-  // Step 1 – Upload
+  // STEP 1 – Upload
   if (step === "upload") {
     return (
       <div className="min-h-screen bg-slate-50 p-6 lg:p-10">
@@ -184,7 +211,10 @@ function BillAnalyzer() {
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
-            onClick={() => !loading && document.getElementById("bill-upload-input")?.click()}
+            onClick={() =>
+              !loading &&
+              document.getElementById("bill-upload-input")?.click()
+            }
           >
             <input
               id="bill-upload-input"
@@ -222,7 +252,8 @@ function BillAnalyzer() {
                 </p>
                 {file && (
                   <p className="mt-2 text-xs text-slate-500">
-                    Last selected: <span className="font-medium">{file.name}</span>
+                    Last selected:{" "}
+                    <span className="font-medium">{file.name}</span>
                   </p>
                 )}
               </div>
@@ -233,8 +264,16 @@ function BillAnalyzer() {
     );
   }
 
-  // Step 2 – Results
+  // STEP 2 – Results
   if (step === "results") {
+    const disputableCount =
+      analysis?.potential_issues?.filter((i) => i.can_patient_dispute).length ||
+      0;
+
+    const selectedIssueObjects = Array.from(selectedIssues)
+      .map((i) => analysis?.potential_issues?.[i])
+      .filter(Boolean);
+
     return (
       <div className="min-h-screen bg-slate-50 p-6 lg:p-10">
         <div className="max-w-6xl mx-auto">
@@ -245,7 +284,7 @@ function BillAnalyzer() {
             </p>
           </header>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-20">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             {/* Bill Overview & Contact Info */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-3 bg-emerald-50">
@@ -263,48 +302,103 @@ function BillAnalyzer() {
               </div>
 
               <div className="p-5 border-b border-slate-100 bg-slate-50/60">
-                <h3 className="text-xs uppercase tracking-wide text-slate-500 font-semibold mb-2">Executive Summary</h3>
+                <h3 className="text-xs uppercase tracking-wide text-slate-500 font-semibold mb-2">
+                  Executive Summary
+                </h3>
                 <p className="text-sm text-slate-700 leading-relaxed">
                   {analysis?.high_level_summary || "No summary available."}
                 </p>
               </div>
 
-              {/* Extracted Contact Details */}
-              {(analysis?.patient_info || analysis?.provider_info || analysis?.bill_info) && (
+              {(analysis?.patient_info ||
+                analysis?.provider_info ||
+                analysis?.bill_info) && (
                 <div className="p-5 space-y-4">
-                  <h3 className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Extracted Information</h3>
-                  
+                  <h3 className="text-xs uppercase tracking-wide text-slate-500 font-semibold">
+                    Extracted Information
+                  </h3>
+
                   <div className="grid gap-3">
-                    {analysis.patient_info && Object.keys(analysis.patient_info).some(key => analysis.patient_info[key]) && (
-                      <div className="bg-slate-50 rounded-lg p-3">
-                        <h4 className="text-xs font-semibold text-slate-900 mb-2">Patient Information</h4>
-                        <div className="space-y-1 text-xs text-slate-600">
-                          {analysis.patient_info.name && <p><span className="font-medium">Name:</span> {analysis.patient_info.name}</p>}
-                          {analysis.patient_info.account_number && <p><span className="font-medium">Account #:</span> {analysis.patient_info.account_number}</p>}
-                          {analysis.patient_info.dob && <p><span className="font-medium">DOB:</span> {analysis.patient_info.dob}</p>}
+                    {analysis.patient_info &&
+                      Object.keys(analysis.patient_info).some(
+                        (key) => analysis.patient_info[key]
+                      ) && (
+                        <div className="bg-slate-50 rounded-lg p-3">
+                          <h4 className="text-xs font-semibold text-slate-900 mb-2">
+                            Patient Information
+                          </h4>
+                          <div className="space-y-1 text-xs text-slate-600">
+                            {analysis.patient_info.name && (
+                              <p>
+                                <span className="font-medium">Name:</span>{" "}
+                                {analysis.patient_info.name}
+                              </p>
+                            )}
+                            {analysis.patient_info.account_number && (
+                              <p>
+                                <span className="font-medium">Account #:</span>{" "}
+                                {analysis.patient_info.account_number}
+                              </p>
+                            )}
+                            {analysis.patient_info.dob && (
+                              <p>
+                                <span className="font-medium">DOB:</span>{" "}
+                                {analysis.patient_info.dob}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {analysis.provider_info && Object.keys(analysis.provider_info).some(key => analysis.provider_info[key]) && (
-                      <div className="bg-slate-50 rounded-lg p-3">
-                        <h4 className="text-xs font-semibold text-slate-900 mb-2">Provider Information</h4>
-                        <div className="space-y-1 text-xs text-slate-600">
-                          {analysis.provider_info.name && <p><span className="font-medium">Name:</span> {analysis.provider_info.name}</p>}
-                          {analysis.provider_info.billing_dept && <p><span className="font-medium">Department:</span> {analysis.provider_info.billing_dept}</p>}
+                    {analysis.provider_info &&
+                      Object.keys(analysis.provider_info).some(
+                        (key) => analysis.provider_info[key]
+                      ) && (
+                        <div className="bg-slate-50 rounded-lg p-3">
+                          <h4 className="text-xs font-semibold text-slate-900 mb-2">
+                            Provider Information
+                          </h4>
+                          <div className="space-y-1 text-xs text-slate-600">
+                            {analysis.provider_info.name && (
+                              <p>
+                                <span className="font-medium">Name:</span>{" "}
+                                {analysis.provider_info.name}
+                              </p>
+                            )}
+                            {analysis.provider_info.billing_dept && (
+                              <p>
+                                <span className="font-medium">Department:</span>{" "}
+                                {analysis.provider_info.billing_dept}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {analysis.bill_info && Object.keys(analysis.bill_info).some(key => analysis.bill_info[key]) && (
-                      <div className="bg-slate-50 rounded-lg p-3">
-                        <h4 className="text-xs font-semibold text-slate-900 mb-2">Bill Details</h4>
-                        <div className="space-y-1 text-xs text-slate-600">
-                          {analysis.bill_info.bill_date && <p><span className="font-medium">Date:</span> {analysis.bill_info.bill_date}</p>}
-                          {analysis.bill_info.total_amount && <p><span className="font-medium">Total:</span> {analysis.bill_info.total_amount}</p>}
+                    {analysis.bill_info &&
+                      Object.keys(analysis.bill_info).some(
+                        (key) => analysis.bill_info[key]
+                      ) && (
+                        <div className="bg-slate-50 rounded-lg p-3">
+                          <h4 className="text-xs font-semibold text-slate-900 mb-2">
+                            Bill Details
+                          </h4>
+                          <div className="space-y-1 text-xs text-slate-600">
+                            {analysis.bill_info.bill_date && (
+                              <p>
+                                <span className="font-medium">Date:</span>{" "}
+                                {analysis.bill_info.bill_date}
+                              </p>
+                            )}
+                            {analysis.bill_info.total_amount && (
+                              <p>
+                                <span className="font-medium">Total:</span>{" "}
+                                {analysis.bill_info.total_amount}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
                   </div>
                 </div>
               )}
@@ -322,7 +416,8 @@ function BillAnalyzer() {
                   </h2>
                   <p className="text-xs text-rose-600 font-medium">
                     {analysis?.potential_issues?.length || 0} line
-                    {(analysis?.potential_issues?.length || 0) === 1 ? "" : "s"} flagged for review
+                    {(analysis?.potential_issues?.length || 0) === 1 ? "" : "s"}{" "}
+                    flagged for review
                   </p>
                 </div>
               </div>
@@ -362,12 +457,16 @@ function BillAnalyzer() {
                                 {issue.issue_type}
                               </span>
                             </div>
-                            <div className={`px-2 py-0.5 rounded text-xs font-medium ${
-                              issue.can_patient_dispute
-                                ? "bg-emerald-100 text-emerald-800"
-                                : "bg-slate-100 text-slate-600"
-                            }`}>
-                              {issue.can_patient_dispute ? "Disputable" : "Non-disputable"}
+                            <div
+                              className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                issue.can_patient_dispute
+                                  ? "bg-emerald-100 text-emerald-800"
+                                  : "bg-slate-100 text-slate-600"
+                              }`}
+                            >
+                              {issue.can_patient_dispute
+                                ? "Disputable"
+                                : "Non-disputable"}
                             </div>
                           </div>
 
@@ -376,12 +475,14 @@ function BillAnalyzer() {
                               Line Item
                             </p>
                             <p className="mb-2">{issue.line_snippet}</p>
-                            
+
                             <p className="uppercase tracking-wide text-[10px] text-rose-600 font-semibold mb-1">
                               Why this might be incorrect
                             </p>
-                            <p className="whitespace-pre-wrap mb-2">{issue.dispute_rationale}</p>
-                            
+                            <p className="whitespace-pre-wrap mb-2">
+                              {issue.dispute_rationale}
+                            </p>
+
                             <p className="uppercase tracking-wide text-[10px] text-rose-600 font-semibold mb-1">
                               Financial Impact
                             </p>
@@ -395,7 +496,7 @@ function BillAnalyzer() {
                               </span>
                             )}
                             <span className="font-semibold text-emerald-600">
-                              Potential savings: ~$50-200
+                              Potential savings: ~$50–200
                             </span>
                           </div>
                         </div>
@@ -407,8 +508,39 @@ function BillAnalyzer() {
             </div>
           </div>
 
+          {/* Call simulator card */}
+          {analysis && (
+            <div className="max-w-6xl mx-auto mb-24">
+              <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-4 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-slate-900 flex items-center justify-center">
+                    <PhoneCall className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-slate-900">
+                      Practice the phone call
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      Simulate a call with the billing office using your real
+                      flagged issues so you know what to say.
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsCallOpen(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900 text-white text-xs font-medium hover:bg-slate-800"
+                >
+                  <PhoneCall className="w-4 h-4" />
+                  Simulate call
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Bottom action bar */}
-          {analysis?.potential_issues?.some(issue => issue.can_patient_dispute) && (
+          {analysis?.potential_issues?.some(
+            (issue) => issue.can_patient_dispute
+          ) && (
             <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-white shadow-xl border border-slate-200 rounded-full px-6 py-3 flex items-center gap-6 max-w-full z-50">
               <div>
                 <div className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold">
@@ -441,11 +573,21 @@ function BillAnalyzer() {
             </div>
           )}
         </div>
+
+        {/* ⭐ Call Simulator Modal */}
+        {analysis && (
+          <BillingCallSimulator
+            open={isCallOpen}
+            onClose={() => setIsCallOpen(false)}
+            analysis={analysis}
+            selectedIssues={selectedIssueObjects}
+          />
+        )}
       </div>
     );
   }
 
-  // Step 3 – Draft appeal
+  // STEP 3 – Draft appeal
   return (
     <div className="min-h-screen bg-slate-50 p-6 lg:p-10">
       <div className="max-w-5xl mx-auto pb-24">
@@ -482,8 +624,8 @@ function BillAnalyzer() {
             <Copy className="w-4 h-4" />
             Copy to clipboard
           </button>
-          
-          <button 
+
+          <button
             onClick={openMailto}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800"
           >

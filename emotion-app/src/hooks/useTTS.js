@@ -4,8 +4,12 @@ export const useTTS = () => {
     if (!text) return;
 
     try {
-      console.log("TTS Request:", { text: text.substring(0, 50) + "...", mode });
-      
+      // mode is just a tag we pass to backend: "REP", "PATIENT", "THERAPIST", etc.
+      console.log("TTS Request:", {
+        text: text.substring(0, 80) + (text.length > 80 ? "..." : ""),
+        mode,
+      });
+
       const res = await fetch("http://localhost:8080/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -31,7 +35,7 @@ export const useTTS = () => {
 
       const blob = await res.blob();
       console.log("TTS Blob:", blob.size, "bytes, type:", blob.type);
-      
+
       if (blob.size === 0) {
         console.error("Empty audio blob received");
         return;

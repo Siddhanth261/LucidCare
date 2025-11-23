@@ -1,16 +1,16 @@
 import os
 import io
+import json
 import pypdf
 import google.generativeai as genai
 from fastapi import FastAPI, UploadFile, File, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 
-# NEW IMPORTS FOR TTS
 import httpx
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
-import json
+from typing import List, Optional, Dict, Any
 
 # Load ENV
 load_dotenv()
@@ -106,7 +106,7 @@ async def analyze_report(file: UploadFile = File(...)):
         return {"error": str(e)}
 
 
-# SESSION STATE
+# SESSION STATE for comfort-stream
 session_state = {}
 
 
@@ -333,12 +333,12 @@ async def comfort_stream(websocket: WebSocket):
 
 
 ###########################################################
-# 6️⃣ NEW — FISHAUDIO TTS ENDPOINT (speech-1.5)
+# 6️⃣ FISHAUDIO TTS ENDPOINT (speech-1.5)
 ###########################################################
 
 class TTSRequest(BaseModel):
     text: str
-    mode: str = "THERAPIST"   # LAWYER (fast) / THERAPIST (slow)
+    mode: str = "THERAPIST"   # THERAPIST / LAWYER / REP / PATIENT / etc.
 
 
 @app.post("/tts")
@@ -346,19 +346,36 @@ async def tts_endpoint(body: TTSRequest):
     """
     Convert text to speech using FishAudio's speech-1.5 model.
     This endpoint returns an MP3 audio stream.
+
+    NOTE: FishAudio's exact voice control requires reference voices.
+    Here we approximate different 'voices' by adjusting speaking style
+    (speed / style tags) based on mode, so REP and PATIENT can at least
+    sound a bit different and remain consistent.
     """
 
     if not FISH_AUDIO_KEY:
         return {"error": "Missing FISH_AUDIO_API_KEY in environment"}
 
-    # Emotion → speaking style
-    speed = 1.1 if body.mode == "LAWYER" else 0.85
+    mode = (body.mode or "THERAPIST").upper()
+
+    # Simple heuristic mapping
+    if mode == "REP":
+        # Neutral male-style, moderate speed
+        speed = 1.0
+    elif mode == "PATIENT":
+        # Slightly faster / lighter
+        speed = 1.1
+    elif mode == "LAWYER":
+        speed = 1.1
+    else:  # THERAPIST or anything else
+        speed = 0.85
 
     headers = {
         "Authorization": f"Bearer {FISH_AUDIO_KEY}",
         "Content-Type": "application/json"
     }
 
+    # This matches the pattern already working in your app
     payload = {
         "text": body.text,
         "model": "speech-1.5",
@@ -386,13 +403,13 @@ async def tts_endpoint(body: TTSRequest):
             }
 
         audio_bytes = response.content
-        
+
         if len(audio_bytes) == 0:
             print("TTS returned empty audio")
             return {"error": "Empty audio response"}
 
         print(f"TTS Success: {len(audio_bytes)} bytes")
-        
+
         return StreamingResponse(
             io.BytesIO(audio_bytes),
             media_type="audio/mpeg",
@@ -405,7 +422,10 @@ async def tts_endpoint(body: TTSRequest):
         print(f"TTS Exception: {str(e)}")
         return {"error": f"TTS failed: {str(e)}"}
 
-import json
+
+###########################################################
+# 7️⃣ BILL ANALYZER (STRUCTURED)
+###########################################################
 
 @app.post("/analyze-bill")
 async def analyze_bill(file: UploadFile = File(...)):
@@ -499,7 +519,7 @@ Bill text:
         try:
             parsed = json.loads(raw)
             return {"structured": True, "analysis": parsed}
-        except:
+        except Exception:
             import re
             match = re.search(r"{[\s\S]*}", raw)
             if match:
@@ -510,20 +530,20 @@ Bill text:
 
     except Exception as e:
         return {"error": str(e)}
-    
-    ###############################################
+
+
+###############################################
 # 8️⃣ APPEAL LETTER GENERATOR
 ###############################################
 
-from pydantic import BaseModel
-
 class AppealRequest(BaseModel):
-    patient_info: dict | None = None
-    provider_info: dict | None = None
-    bill_info: dict | None = None
-    analysis: dict | None = None
-    issues_summary: str | None = None
+    patient_info: Optional[Dict[str, Any]] = None
+    provider_info: Optional[Dict[str, Any]] = None
+    bill_info: Optional[Dict[str, Any]] = None
+    analysis: Optional[Dict[str, Any]] = None
+    issues_summary: Optional[str] = None
     tone: str = "firm-but-polite"
+
 
 @app.post("/draft-appeal-letter")
 async def draft_appeal_letter(body: AppealRequest):
@@ -579,5 +599,74 @@ Generate the complete letter ready to send.
     try:
         response = model.generate_content(prompt)
         return {"letter": response.text}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+###############################################
+# 9️⃣ BILLING CALL TURN (GEMINI ROLEPLAY)
+###############################################
+
+class TranscriptMessage(BaseModel):
+    speaker: str  # "you" or "rep"
+    text: str
+
+
+class BillingCallTurn(BaseModel):
+    transcript: List[TranscriptMessage] = []
+    analysis: Optional[Dict[str, Any]] = None
+    selectedIssues: Optional[List[Dict[str, Any]]] = None
+
+
+@app.post("/billing-call-turn")
+async def billing_call_turn(body: BillingCallTurn):
+    """
+    Given a transcript and bill analysis, have Gemini respond
+    as a calm, neutral U.S. hospital billing representative.
+    """
+
+    if not GOOGLE_API_KEY:
+        return {"error": "Gemini key missing"}
+
+    # Build conversation text (limit to last ~8 turns to keep prompt manageable)
+    convo_lines = []
+    for msg in body.transcript[-8:]:
+        role = "Patient" if msg.speaker == "you" else "Billing Representative"
+        convo_lines.append(f"{role}: {msg.text}")
+    convo_text = "\n".join(convo_lines) if convo_lines else "Patient: (call just started)"
+
+    # Analysis context
+    analysis_json = json.dumps(body.analysis or {}, indent=2)
+    selected_issues_json = json.dumps(body.selectedIssues or [], indent=2)
+
+    prompt = f"""
+You are a calm, neutral U.S. hospital billing representative.
+You are on the phone with a patient about their medical bill.
+
+You must:
+- Sound professional but human and empathetic
+- Avoid legal admissions of fault
+- Explain that you can request a coding/billing review when appropriate
+- Reference the types of issues the patient is raising (upcoding, unbundling, medical necessity, duplicates, etc.)
+- Keep responses concise: 2–4 sentences max
+- Only speak as the billing representative (no 'Patient:' labels)
+
+BILL ANALYSIS (JSON):
+{analysis_json}
+
+SELECTED ISSUES (the patient is most concerned about these):
+{selected_issues_json}
+
+CONVERSATION SO FAR:
+{convo_text}
+
+Now produce ONLY the billing representative's next spoken reply, in plain text.
+No stage directions, no speaker labels, no bullet points.
+"""
+
+    try:
+        response = model.generate_content(prompt)
+        reply = response.text.strip()
+        return {"reply": reply}
     except Exception as e:
         return {"error": str(e)}

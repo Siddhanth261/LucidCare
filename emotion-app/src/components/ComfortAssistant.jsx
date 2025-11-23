@@ -1,8 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Bot, ChevronRight, Sparkles, Loader2 } from 'lucide-react';
+import { useTTS } from "../hooks/useTTS";
 
-function ComfortAssistant({ messages = [], isActive, onNextSection, progress, isComplete }) {
+function ComfortAssistant({ 
+  messages = [], 
+  isActive, 
+  onNextSection, 
+  progress, 
+  isComplete,
+  mode = "THERAPIST"      // ⭐ NEW: passed from parent
+}) {
+
   const messagesEndRef = useRef(null);
+  const previousMessagesRef = useRef(messages);
+  const { speak } = useTTS();   // ⭐ NEW
   const [isLoading, setIsLoading] = useState(false);
   const [previousMessageCount, setPreviousMessageCount] = useState(0);
 
@@ -19,6 +30,19 @@ function ComfortAssistant({ messages = [], isActive, onNextSection, progress, is
     }
     setPreviousMessageCount(messages.length);
   }, [messages]);
+
+  // ⭐ NEW — detect new messages & play FishAudio TTS
+  useEffect(() => {
+    if (messages.length > previousMessagesRef.current.length) {
+      const latestMsg = messages[messages.length - 1];
+
+      if (latestMsg) {
+        speak(latestMsg, mode);    // TTS plays here
+      }
+    }
+
+    previousMessagesRef.current = messages;
+  }, [messages, mode, speak]);
 
   const handleNextSection = () => {
     setIsLoading(true);

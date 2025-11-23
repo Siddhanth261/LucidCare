@@ -5,3 +5,5 @@ requests
 websockets
 pypdf
 google-generativeai
+httpx
+python-dotenv

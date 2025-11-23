@@ -20,3 +20,4 @@ services:
     environment:
       # Docker will automatically fill this from your .env file
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - FISH_AUDIO_API_KEY=${FISH_AUDIO_API_KEY}

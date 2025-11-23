@@ -6,108 +6,107 @@
 
 ## 🚀 **Overview**
 
-> Medical bills and reports are scary. LucidCare makes them simple.
+> Medical bills and reports are scary. **LucidCare makes them simple.**
 > It explains your report warmly, understands your emotions, finds billing errors, drafts your dispute letter, and even practices a realistic phone call with you—using natural, consistent AI voices.
 
-Our AI system can:
+LucidCare can:
 
-* **Analyze your medical bill**
-* **Explain your medical report** in simple human language
-* **Read your facial expression** and adjust tone based on your emotion
-* **Detect coding mistakes** (unbundling, upcoding, unnecessary tests, etc.)
-* **Draft a dispute/appeal letter** using real billing standards
-* **Simulate a realistic phone call** with a billing department using **consistent AI voices**
-* **Coach you** on how to dispute charges with confidence
+* **Analyze your medical bill** for errors
+* **Explain your medical report** in clear human language
+* **Read your facial expression** and adjust tone based on emotion
+* **Detect coding mistakes** (upcoding, unbundling, duplicates, etc.)
+* **Draft a professional dispute letter**
+* **Simulate a realistic phone call** with a billing department
+* **Coach you** on what to say so you feel confident and prepared
 
-LucidCare brings clarity to a system most people feel scared of.
+LucidCare brings clarity to a system most people are afraid of.
 
 ---
 
 ## 🧠 **Why We Built This**
 
-Most people don’t understand medical reports—they’re full of complex terms.
-Most people also feel **anxious and powerless** when they see a surprise bill.
-
-We wanted to fix that.
+Most people don’t understand medical reports—they’re full of complex terminology.
+Most people also feel **anxious, confused, or powerless** when they receive a medical bill.
 
 We built LucidCare to:
 
-* Make medical information easy to understand
-* Detect unfair or incorrect billing
-* Help patients confidently dispute charges
-* Provide emotional support using real-time sentiment detection
-* Make healthcare communication feel human again
+* Make medical information **easy to understand**
+* Detect unfair or incorrect charges
+* Help patients dispute bills confidently
+* Offer emotional support using **real-time sentiment detection**
+* Make healthcare communication feel **human and compassionate**
 
-Healthcare shouldn’t be a puzzle. LucidCare makes it clear.
+Healthcare shouldn’t feel like a puzzle. LucidCare makes it clear.
 
 ---
 
-## **Key Features**
+## ✨ **Key Features**
 
 ### ✔️ **1. Medical Report Explainer**
 
 Upload your report →
-AI explains every section in simple language.
+LucidCare breaks down every section using simple, friendly language.
 
-* Uses **Gemini** for detailed summaries
-* Detects sentiment (sad, anxious, confused)
-* Changes tone and explanation style based on your emotion
-* Speaks aloud using dynamic voice styles
+Features:
+
+* Uses **Gemini** for high-quality summarization
+* Detects user emotion (sad, anxious, confused)
+* Adjusts tone dynamically
+* Supports natural voice-based explanations
 
 ---
 
 ### ✔️ **2. Smart Bill Analyzer**
 
-The AI scans your medical bill and identifies:
+LucidCare scans your medical bill and identifies:
 
 * Upcoding
 * Unbundling
-* Duplicates
-* Clerical errors
-* Medically unnecessary tests
+* Duplicate charges
+* Clerical mistakes
+* Medically unnecessary services
 * High-impact financial errors
 
-Outputs clean structured JSON with all findings.
+Outputs clean, structured JSON with everything the user needs to know.
 
 ---
 
 ### ✔️ **3. Automatic Appeal Letter Generator**
 
-With one click, LucidCare writes:
+With a single click, LucidCare generates:
 
-* A professional dispute letter
-* With correct formatting
-* Using your provider info, account number, codes, and issues
-* In a firm but polite tone
+* A professional dispute/appeal letter
+* Correct provider + account info
+* Detected billing problems
+* A firm but respectful tone
 
-You can edit or send it via email.
-
----
-
-### ✔️ **4. AI Phone-Call Practice (Roleplay)**
-
-This is the star feature.
-LucidCare generates a full back-and-forth phone call:
-
-* AI billing agent speaks in a **consistent male voice**
-* AI patient voice responds in a different consistent voice
-* No lag, fully automated
-* Helps you practice disputing your bill
-* Each side speaks realistically
-
-This helps users gain confidence before calling their real provider.
+Users can edit or send it directly.
 
 ---
 
-### ✔️ **5. Stable TTS Voices (FishAudio)**
+### ✔️ **4. AI Phone-Call Practice (Roleplay Simulator)**
 
-We use **FishAudio speech-1.5** with **fixed voice IDs**:
+One of LucidCare’s most powerful features.
 
-* Billing Agent Voice → permanent
-* Patient Voice → permanent
-* Report Explainer → dynamic emotional voice
+* A consistent, natural **billing agent voice**
+* A separate consistent **patient voice**
+* Fully automated conversation
+* Users practice disputing charges in a no-stress environment
+* Realistic call flow, back-and-forth dialogue
 
-This ensures the call sounds realistic and polished.
+This turns a dreaded phone call into an empowering learning experience.
+
+---
+
+### ✔️ **5. Stable Voice Experience (FishAudio)**
+
+Powered by **FishAudio speech-1.5** with **fixed voice IDs**:
+
+* Billing Agent Voice → stable
+* Patient Voice → stable
+* Report Explainer → emotional adaptive voice
+
+Every interaction feels polished and consistent.
 
 ---
 
@@ -118,15 +117,15 @@ This ensures the call sounds realistic and polished.
 * React
 * Tailwind CSS
 * WebSockets
-* Custom TTS playback queue
-* Facial expression / sentiment detection (client-side)
+* Custom TTS playback engine
+* Client-side facial expression & sentiment detection
 
 ### **Backend**
 
 * FastAPI
 * Gemini 2.5 Flash (Google Generative AI)
 * FishAudio TTS
-* pypdf for text extraction
+* `pypdf` for text extraction
 * JSON parsing + prompt engineering
 * Call-script generator
 
@@ -150,46 +149,38 @@ backend/
 
 ---
 
-## 🔧 **Local Setup**
+## 🔧 **Running Our Project**
 
-### **1. Install frontend**
+LucidCare runs fully in Docker—no manual setup required.
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-### **2. Install backend**
+### **1. Clone the repository**
 
 ```bash
-cd backend
-pip install -r requirements.txt
-uvicorn main:app --reload
+git clone https://github.com/your-repo/lucidcare.git
 ```
 
-### **3. Add environment variables**
+### **2. Navigate into the project**
 
-Create `.env` file:
+```bash
+cd emotion-app
+```
 
+### **3. Make sure Docker Desktop (Windows/Mac) or Docker Engine (Linux) is running**
+
+### **4. Start the whole system**
+
+```bash
+docker compose up
 ```
-GEMINI_API_KEY=your_key_here
-FISH_AUDIO_API_KEY=your_key_here
-```
+
+Docker automatically launches both the frontend and backend.
 
 ---
 
 ## 📞 **Demo Workflow**
 
-1. Upload medical bill → AI extracts info
-2. View issues → select which ones to dispute
-3. Generate appeal letter
-4. Start phone call simulation
-5. AI plays both voices in a realistic roleplay
-6. You walk away confident and prepared
-
-
-Running Our Project:
-1. Clone the repo
-2. cd into the `emotion-app` directory.
-3. Having installed docker desktop in windows/mac or running on linux, run `docker compose up`.
+1. Upload your medical bill
+2. AI extracts and identifies issues
+3. Select which findings you want to dispute
+4. Generate a professional appeal letter
+5. Practice the phone call with the AI billing agent

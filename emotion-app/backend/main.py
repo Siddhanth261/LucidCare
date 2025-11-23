@@ -416,6 +416,7 @@ async def analyze_bill(file: UploadFile = File(...)):
     - detect duplicate charges
     - check for upcoding or unbundling
     - find clerical mistakes or coverage errors
+    - extract contact details
     - generate structured JSON
     """
 
@@ -443,6 +444,7 @@ Analyze the bill text below.
 
 Your job:
 - Identify CPT, ICD-10, HCPCS, revenue codes.
+- Extract contact information for both patient and provider
 - Detect any:
   - duplicate charges
   - unbundling
@@ -453,6 +455,27 @@ Your job:
 
 {{
   "high_level_summary": "string",
+  "patient_info": {{
+    "name": "extracted patient name or null",
+    "address": "extracted patient address or null", 
+    "city_state_zip": "extracted patient city, state, zip or null",
+    "phone": "extracted patient phone or null",
+    "email": "extracted patient email or null",
+    "account_number": "extracted account/patient ID or null",
+    "dob": "extracted date of birth or null"
+  }},
+  "provider_info": {{
+    "name": "extracted provider/facility name or null",
+    "billing_dept": "billing department name or 'Billing Department'",
+    "address": "extracted provider address or null",
+    "city_state_zip": "extracted provider city, state, zip or null",
+    "phone": "extracted provider phone or null"
+  }},
+  "bill_info": {{
+    "bill_date": "extracted bill/service date or null",
+    "due_date": "extracted due date or null",
+    "total_amount": "extracted total amount or null"
+  }},
   "potential_issues": [
     {{
       "line_snippet": "string from bill",
@@ -495,10 +518,9 @@ Bill text:
 from pydantic import BaseModel
 
 class AppealRequest(BaseModel):
-    patient_name: str | None = None
-    provider_name: str | None = None
-    bill_date: str | None = None
-    account_number: str | None = None
+    patient_info: dict | None = None
+    provider_info: dict | None = None
+    bill_info: dict | None = None
     analysis: dict | None = None
     issues_summary: str | None = None
     tone: str = "firm-but-polite"
@@ -514,23 +536,44 @@ async def draft_appeal_letter(body: AppealRequest):
         return {"error": "Gemini key missing"}
 
     prompt = f"""
-Write a formal, firm-but-polite dispute letter for incorrect medical billing.
+Write a formal, professional medical bill dispute letter with proper business letter formatting.
 
-Patient: {body.patient_name}
-Provider: {body.provider_name}
-Bill date: {body.bill_date}
-Account number: {body.account_number}
+Use the following information to create a complete, professional dispute letter:
 
-Here is the analysis of the billing issues to reference:
+PATIENT INFORMATION (use this for the letter header and signature):
+{json.dumps(body.patient_info, indent=2) if body.patient_info else "No patient info extracted - use placeholders"}
+
+PROVIDER INFORMATION (use this for the recipient address):
+{json.dumps(body.provider_info, indent=2) if body.provider_info else "No provider info extracted - use placeholders"}
+
+BILL INFORMATION (reference these details in the letter):
+{json.dumps(body.bill_info, indent=2) if body.bill_info else "No bill info extracted - use placeholders"}
+
+BILLING ISSUES TO DISPUTE:
 {json.dumps(body.analysis, indent=2)}
 
-Extra notes from the patient:
+ADDITIONAL CONTEXT:
 {body.issues_summary}
 
-Tone: {body.tone}
+INSTRUCTIONS:
+1. Create a proper business letter format with:
+   - Patient's name and address at top (from patient_info)
+   - Current date
+   - Provider's name and billing department address (from provider_info)
+   - Professional subject line with account number
+   
+2. Write 4-6 professional paragraphs that:
+   - Clearly identify the billing errors from the analysis
+   - Reference specific medical codes and charges
+   - Request itemized review and correction
+   - Use a {body.tone} tone
+   - Request written response within 30 days
+   
+3. End with professional closing and patient signature
 
-Write 4–6 paragraphs.  
-Be factual, respectful, and not emotional.  
+4. If any contact information is missing, use appropriate placeholders like [Your Name], [Provider Name], etc.
+
+Generate the complete letter ready to send.
 """
 
     try:

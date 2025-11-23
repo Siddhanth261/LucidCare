@@ -7,3 +7,7 @@ export { default as StableEmotionIndicator } from './StableEmotionIndicator';
 export { default as FileUploadCard } from './FileUploadCard';
 export { default as MedicalSummary } from './MedicalSummary';
 export { default as ComfortAssistant } from './ComfortAssistant';
+export { default as Drawer } from './Drawer';
+export { default as MenuButton } from './MenuButton';
+export { default as Dashboard } from './Dashboard';
+export { default as DiagnosticsPage } from './DiagnosticsPage';

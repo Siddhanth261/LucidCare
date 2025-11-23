@@ -1,12 +1,9 @@
 import React, { useRef, useState } from 'react';
 import './App.css';
-import Header from './components/Header';
-import VideoMonitor from './components/VideoMonitor';
-import EmotionStats from './components/EmotionStats';
-import StableEmotionIndicator from './components/StableEmotionIndicator';
-import FileUploadCard from './components/FileUploadCard';
-import MedicalSummary from './components/MedicalSummary';
-import ComfortAssistant from './components/ComfortAssistant';
+import Drawer from './components/Drawer';
+import MenuButton from './components/MenuButton';
+import Dashboard from './components/Dashboard';
+import DiagnosticsPage from './components/DiagnosticsPage';
 import { useFaceDetection } from './hooks/useFaceDetection';
 import { useEmotionTracking } from './hooks/useEmotionTracking';
 import { useWebSocket } from './hooks/useWebSocket';
@@ -20,6 +17,8 @@ function App() {
   // State
   const [initializing, setInitializing] = useState(true);
   const [emotions, setEmotions] = useState({});
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState('dashboard'); // 'dashboard' or 'diagnostics'
   
   // Custom Hooks
   const { handleVideoOnPlay } = useFaceDetection(videoRef, setInitializing);
@@ -36,49 +35,47 @@ function App() {
 
   const onVideoPlay = () => handleVideoOnPlay(canvasRef, setEmotions);
 
+  const handleNavigate = (page) => {
+    setCurrentPage(page);
+    setIsDrawerOpen(false);
+  };
+
   return (
-    <div className="min-h-screen bg-white text-slate-900 p-6 font-sans min-w-full">
-      <Header initializing={initializing} />
+    <div className="min-h-screen bg-white text-slate-900 font-sans">
+      {/* Menu Button */}
+      <MenuButton onClick={() => setIsDrawerOpen(true)} />
 
-      {/* Main Grid Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
-        
-        {/* LEFT COLUMN: Patient Monitor */}
-        <div className="flex flex-col gap-4">
-          <VideoMonitor 
-            videoRef={videoRef}
-            canvasRef={canvasRef}
-            onPlay={onVideoPlay}
-          />
-          
-          <EmotionStats 
-            emotions={emotions}
-            stableEmotion={stableEmotion}
-          />
-          
-          <StableEmotionIndicator stableEmotion={stableEmotion} />
-        </div>
+      {/* Drawer */}
+      <Drawer 
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        onNavigate={handleNavigate}
+        currentPage={currentPage}
+      />
 
-        {/* RIGHT COLUMN: AI Control Center */}
-        <div className="flex flex-col gap-6 h-full">
-          <FileUploadCard 
-            file={file}
-            onFileUpload={handleFileUpload}
-          />
+      {/* Page Content - Use visibility to keep components mounted */}
+      <div style={{ display: currentPage === 'dashboard' ? 'block' : 'none' }}>
+        <Dashboard 
+          videoRef={videoRef}
+          canvasRef={canvasRef}
+          onVideoPlay={onVideoPlay}
+          emotions={emotions}
+          stableEmotion={stableEmotion}
+          messages={messages}
+          isActive={isActive}
+          onNextSection={requestNextSection}
+          progress={progress}
+          isComplete={isComplete}
+        />
+      </div>
 
-          <MedicalSummary 
-            summary={summary}
-            isAnalyzing={isAnalyzing}
-          />
-
-          <ComfortAssistant 
-            messages={messages}
-            isActive={isActive}
-            onNextSection={requestNextSection}
-            progress={progress}
-            isComplete={isComplete}
-          />
-        </div>
+      <div style={{ display: currentPage === 'diagnostics' ? 'block' : 'none' }}>
+        <DiagnosticsPage 
+          file={file}
+          onFileUpload={handleFileUpload}
+          summary={summary}
+          isAnalyzing={isAnalyzing}
+        />
       </div>
     </div>
   );

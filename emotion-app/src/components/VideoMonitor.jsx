@@ -2,13 +2,13 @@ import React from 'react';
 
 function VideoMonitor({ videoRef, canvasRef, onPlay }) {
   return (
-    <div className="relative bg-white rounded-xl overflow-hidden shadow-sm border border-gray-200">
+    <div className="relative w-full h-full bg-black">
       <video 
         ref={videoRef} 
         autoPlay 
         muted 
         onPlay={onPlay}
-        className="w-full h-auto object-cover bg-black"
+        className="w-full h-full object-cover"
       />
       <canvas 
         ref={canvasRef} 

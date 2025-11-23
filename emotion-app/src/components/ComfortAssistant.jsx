@@ -1,8 +1,10 @@
-import React, { useEffect, useRef } from 'react';
-import { Bot, ChevronRight } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Bot, ChevronRight, Sparkles, Loader2 } from 'lucide-react';
 
 function ComfortAssistant({ messages = [], isActive, onNextSection, progress, isComplete }) {
   const messagesEndRef = useRef(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [previousMessageCount, setPreviousMessageCount] = useState(0);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -10,65 +12,128 @@ function ComfortAssistant({ messages = [], isActive, onNextSection, progress, is
 
   useEffect(() => {
     scrollToBottom();
+    
+    // Detect when new message arrives
+    if (messages.length > previousMessageCount) {
+      setIsLoading(false);
+    }
+    setPreviousMessageCount(messages.length);
   }, [messages]);
 
+  const handleNextSection = () => {
+    setIsLoading(true);
+    onNextSection();
+  };
+
   return (
-    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col h-96">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-          <Bot size={16} /> LucidCare Assistant
-          {isActive && (
-            <span className="ml-2 text-xs font-normal bg-green-100 text-green-700 px-2 py-0.5 rounded">
-              LIVE
-            </span>
+    <div className="bg-white rounded-2xl border border-gray-200 shadow-lg flex flex-col h-full">
+      {/* Chat Header */}
+      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-2 rounded-t-2xl">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-1 bg-white rounded">
+              <Bot size={14} className="text-indigo-600" />
+            </div>
+            <div>
+              <h2 className="text-white font-semibold text-xs">LucidCare Assistant</h2>
+              <div className="flex items-center gap-1 text-xs text-indigo-100">
+                {isActive && <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>}
+                <span className="text-xs">{isActive ? 'Active' : 'Ready'}</span>
+              </div>
+            </div>
+          </div>
+          {progress && (
+            <div className="text-white text-xs bg-white/20 px-2 py-0.5 rounded-full">
+              {progress}
+            </div>
           )}
-        </h2>
-        {progress && (
-          <span className="text-xs text-slate-500">
-            Section {progress}
-          </span>
-        )}
+        </div>
       </div>
 
       {/* Chat Messages */}
-      <div className="flex-grow overflow-y-auto mb-4 space-y-3 bg-slate-50 rounded-lg p-4 border border-gray-100">
+      <div className="flex-1 overflow-y-auto p-2 space-y-2 bg-gradient-to-b from-slate-50 to-white">
         {messages.length === 0 ? (
-          <div className="text-slate-500 text-sm text-center py-8">
-            Upload a medical report to begin the conversation...
+          <div className="flex flex-col items-center justify-center h-full text-center space-y-2">
+            <div className="p-2 bg-indigo-50 rounded-full">
+              <Sparkles size={24} className="text-indigo-400" />
+            </div>
+            <div>
+              <p className="text-slate-700 font-medium text-xs">Ready to help you understand medical reports</p>
+              <p className="text-slate-500 text-xs">Upload a medical report to begin</p>
+            </div>
           </div>
         ) : (
-          messages.map((msg, idx) => (
-            <div key={idx} className="flex gap-3">
-              <div className="flex-shrink-0 mt-1">
-                <Bot size={16} className="text-indigo-600" />
-              </div>
-              <div className="flex-grow">
-                <div className="text-sm text-slate-700 leading-relaxed">
-                  {msg}
+          <>
+            {messages.map((msg, idx) => (
+              <div key={idx} className="flex gap-2 animate-fadeIn">
+                <div className="flex-shrink-0">
+                  <div className="w-6 h-6 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center">
+                    <Bot size={14} className="text-white" />
+                  </div>
+                </div>
+                <div className="flex-grow">
+                  <div className="bg-white border border-gray-200 rounded-xl rounded-tl-sm p-2.5 shadow-sm">
+                    <p className="text-sm text-slate-700 leading-relaxed">
+                      {msg}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
+            ))}
+            {isLoading && (
+              <div className="flex gap-2 animate-fadeIn">
+                <div className="flex-shrink-0">
+                  <div className="w-6 h-6 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center">
+                    <Bot size={14} className="text-white" />
+                  </div>
+                </div>
+                <div className="flex-grow">
+                  <div className="bg-white border border-gray-200 rounded-xl rounded-tl-sm p-2.5 shadow-sm">
+                    <div className="flex items-center gap-2 text-indigo-600">
+                      <Loader2 size={14} className="animate-spin" />
+                      <span className="text-xs">Thinking...</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Next Section Button */}
-      {isActive && !isComplete && messages.length > 0 && (
-        <button
-          onClick={onNextSection}
-          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors"
-        >
-          Continue to Next Section
-          <ChevronRight size={16} />
-        </button>
-      )}
+      {/* Chat Footer */}
+      <div className="p-2 border-t border-gray-200 bg-white rounded-b-2xl">
+        {isActive && !isComplete && messages.length > 0 && (
+          <button
+            onClick={handleNextSection}
+            disabled={isLoading}
+            className={`w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-all shadow-md font-medium text-sm ${
+              isLoading 
+                ? 'opacity-50 cursor-not-allowed' 
+                : 'hover:from-indigo-700 hover:to-purple-700 hover:shadow-lg active:scale-95'
+            }`}
+          >
+            {isLoading ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                <span>Loading...</span>
+              </>
+            ) : (
+              <>
+                <span>Continue to Next Section</span>
+                <ChevronRight size={14} />
+              </>
+            )}
+          </button>
+        )}
 
-      {isComplete && (
-        <div className="text-center text-sm text-green-700 bg-green-50 py-2 px-4 rounded-lg">
-          ✓ Report explanation complete
-        </div>
-      )}
+        {isComplete && (
+          <div className="text-center text-xs text-green-700 bg-green-50 py-2 px-3 rounded-lg border border-green-200 font-medium">
+            ✓ Report explanation complete
+          </div>
+        )}
+      </div>
     </div>
   );
 }

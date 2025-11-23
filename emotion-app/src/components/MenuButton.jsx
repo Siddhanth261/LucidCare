@@ -5,10 +5,10 @@ function MenuButton({ onClick }) {
   return (
     <button
       onClick={onClick}
-      className="fixed top-6 left-6 z-30 p-3 bg-white rounded-lg shadow-lg hover:shadow-xl border border-gray-200 transition-all hover:bg-gray-50"
+      className="fixed top-6 left-6 z-30 p-3.5 bg-white rounded-lg shadow-sm border border-gray-200 transition-all hover:shadow-md"
       aria-label="Open menu"
     >
-      <Menu size={24} className="text-slate-700" />
+      <Menu size={24} className="text-gray-700" />
     </button>
   );
 }

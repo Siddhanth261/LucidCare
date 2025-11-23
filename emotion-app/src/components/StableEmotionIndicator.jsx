@@ -3,12 +3,12 @@ import { Target } from 'lucide-react';
 
 function StableEmotionIndicator({ stableEmotion }) {
   return (
-    <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-2 rounded-lg border border-indigo-200 text-center">
-      <div className="text-xs text-indigo-700 font-medium mb-0.5 flex items-center justify-center gap-1">
-        <Target size={12} className="text-indigo-500" />
-        <span>Stable (10s+)</span>
+    <div className="bg-gray-100 p-4 rounded-lg border border-gray-200 text-center">
+      <div className="text-xs text-gray-700 font-semibold mb-2 flex items-center justify-center gap-1.5 uppercase tracking-wide">
+        <Target size={14} className="text-gray-600" />
+        <span>Stable Emotion (10s+)</span>
       </div>
-      <div className="text-sm font-bold text-slate-800 uppercase">
+      <div className="text-lg font-semibold text-gray-900 uppercase tracking-wide">
         {stableEmotion || 'Detecting...'}
       </div>
     </div>

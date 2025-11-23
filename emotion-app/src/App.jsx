@@ -41,7 +41,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 font-sans">
+    <div className="min-h-screen bg-white text-gray-900 font-sans">
       {/* Menu Button */}
       <MenuButton onClick={() => setIsDrawerOpen(true)} />
 

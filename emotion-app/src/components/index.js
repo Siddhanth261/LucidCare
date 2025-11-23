@@ -1,4 +1,3 @@
-// Component exports
 export { default as Header } from './Header';
 export { default as VideoMonitor } from './VideoMonitor';
 export { default as EmotionCard } from './EmotionCard';

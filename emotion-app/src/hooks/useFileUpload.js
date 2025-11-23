@@ -25,7 +25,6 @@ export const useFileUpload = (startComfortStream) => {
       const reportSummary = data.summary;
       setSummary(reportSummary);
       
-      // Initialize WebSocket connection now that we have context
       startComfortStream(reportSummary);
     } catch (err) {
       console.error(err);

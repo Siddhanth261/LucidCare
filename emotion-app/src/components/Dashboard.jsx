@@ -20,7 +20,6 @@ function Dashboard({
   return (
     <div className="min-h-screen bg-gray-50 p-6 overflow-hidden">
       <div className="max-w-[1600px] mx-auto h-full flex flex-col">
-        {/* Dashboard Header */}
         <div className="mb-6">
           <div className="flex items-center justify-between">
             <div>
@@ -44,7 +43,6 @@ function Dashboard({
         </div>
 
         <div className="grid grid-cols-12 gap-6 flex-1 overflow-hidden">
-          {/* Column 1: Camera Feed */}
           <div className="col-span-3">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-full flex flex-col">
               <div className="bg-gray-800 p-4 rounded-t-lg">
@@ -65,7 +63,6 @@ function Dashboard({
             </div>
           </div>
 
-          {/* Column 2: Emotion Analytics */}
           <div className="col-span-3">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 h-full overflow-hidden flex flex-col">
               <h2 className="text-base font-semibold text-gray-800 mb-4 flex items-center gap-2">
@@ -81,7 +78,6 @@ function Dashboard({
             </div>
           </div>
 
-          {/* Column 3: AI Assistant */}
           <div className="col-span-6 h-full">
             <ComfortAssistant 
               messages={messages}

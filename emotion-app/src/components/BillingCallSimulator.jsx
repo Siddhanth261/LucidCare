@@ -83,7 +83,7 @@ export default function BillingCallSimulator({ open, onClose, analysis, script =
         if (turn.speaker === "rep") {
           await speak(text, "BILLING_REP");
         } else {
-          await speak(text, "BILLING_USER");
+          await speak(text, "COMFORT");
         }
       }
 
@@ -181,7 +181,7 @@ export default function BillingCallSimulator({ open, onClose, analysis, script =
           <div className="flex flex-wrap gap-2 text-[11px] text-slate-500">
             <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-100">
               <Volume2 className="w-3 h-3" />
-              Two voices: rep (en_male_1) &amp; patient (en_male_2)
+              Two distinct voices: billing rep &amp; patient
             </span>
             <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 text-emerald-700">
               Fully simulated practice call – no real dialing

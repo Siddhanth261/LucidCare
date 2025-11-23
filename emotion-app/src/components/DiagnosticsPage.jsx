@@ -6,7 +6,6 @@ function DiagnosticsPage({ file, onFileUpload, summary, isAnalyzing }) {
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-6xl mx-auto">
-        {/* Page Header */}
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-3">
             <div>
@@ -16,7 +15,6 @@ function DiagnosticsPage({ file, onFileUpload, summary, isAnalyzing }) {
           </div>
         </div>
 
-        {/* File Upload Section */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 mb-6">
           <div className="flex items-center gap-2 mb-5">
             <h2 className="text-xl font-semibold text-gray-800">Upload Medical Report</h2>
@@ -38,7 +36,6 @@ function DiagnosticsPage({ file, onFileUpload, summary, isAnalyzing }) {
           </div>
         </div>
 
-        {/* Diagnostics Results Section */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
           <div className="flex items-center gap-2 mb-6">
             <h2 className="text-xl font-semibold text-gray-800">Analysis Results</h2>

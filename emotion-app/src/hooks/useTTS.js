@@ -1,11 +1,9 @@
-// src/hooks/useTTS.js
 import { useRef } from "react";
 
 export const useTTS = () => {
-  // Queue so voices don't overlap
   const queueRef = useRef(Promise.resolve());
 
-  const speak = (text, mode = "THERAPIST") => {
+  const speak = (text, mode = "COMFORT") => {
     if (!text) return Promise.resolve();
 
     const playOnce = async () => {
@@ -13,6 +11,7 @@ export const useTTS = () => {
         console.log("TTS Request:", {
           text: text.substring(0, 80) + (text.length > 80 ? "..." : ""),
           mode,
+          component: mode === "COMFORT" ? "ComfortAssistant" : mode.includes("BILLING") ? "BillingCallSimulator" : "Other"
         });
 
         const res = await fetch("http://localhost:8080/tts", {
@@ -78,7 +77,6 @@ export const useTTS = () => {
       }
     };
 
-    // Chain onto queue
     queueRef.current = queueRef.current.then(playOnce).catch((err) => {
       console.error("TTS queue error:", err);
     });

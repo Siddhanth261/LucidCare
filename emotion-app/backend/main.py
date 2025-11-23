@@ -12,20 +12,16 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 import httpx
 
-# Load ENV
 load_dotenv()
 
-# API KEYS
 GOOGLE_API_KEY = os.environ.get("GEMINI_API_KEY")
 FISH_AUDIO_KEY = os.environ.get("FISH_AUDIO_API_KEY")
 
-# Configure Gemini
 genai.configure(api_key=GOOGLE_API_KEY)
 model = genai.GenerativeModel("gemini-2.5-flash")
 
 app = FastAPI()
 
-# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -33,9 +29,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ---------------------------------------------------
-# HEALTH
-# ---------------------------------------------------
 @app.get("/health")
 async def health_check():
   if not GOOGLE_API_KEY:
@@ -69,9 +62,6 @@ async def list_models():
       return {"error": str(e)}
 
 
-# ---------------------------------------------------
-# PDF ANALYSIS (medical report)
-# ---------------------------------------------------
 @app.post("/analyze-report")
 async def analyze_report(file: UploadFile = File(...)):
   print(f"Receiving file: {file.filename}")
@@ -110,9 +100,6 @@ async def analyze_report(file: UploadFile = File(...)):
       return {"error": str(e)}
 
 
-# ---------------------------------------------------
-# SESSION STATE FOR COMFORT STREAM
-# ---------------------------------------------------
 session_state = {}
 
 
@@ -157,7 +144,6 @@ def parse_sections(summary_text: str):
       print(f"Parsed {len(sections)} sections")
       return sections
 
-  # FALLBACK
   lines = summary_text.split("\n")
   sections = []
   current = {"title": "Introduction", "content": ""}
@@ -194,9 +180,6 @@ def parse_sections(summary_text: str):
   return sections
 
 
-# ---------------------------------------------------
-# COMFORT STREAM (WebSocket)
-# ---------------------------------------------------
 @app.websocket("/comfort-stream")
 async def comfort_stream(websocket: WebSocket):
   await websocket.accept()
@@ -232,8 +215,7 @@ async def comfort_stream(websocket: WebSocket):
           if not session["sections"]:
               await websocket.send_json({"error": "No report loaded"})
               continue
-
-          # INTRODUCTION
+          
           if not session["introduced"]:
               intro_prompt = (
                   "You are a compassionate AI named LucidCare Assistant. "
@@ -345,16 +327,13 @@ async def comfort_stream(websocket: WebSocket):
 # ---------------------------------------------------
 class TTSRequest(BaseModel):
   text: str
-  mode: str = "THERAPIST"   # THERAPIST / LAWYER / BILLING_REP / BILLING_USER
+  mode: str = "COMFORT"
 
 
 VOICE_PRESETS = {
-  # existing:
-  "THERAPIST": {"voice_id": "en_male_2", "speed": 0.85},
-  "LAWYER": {"voice_id": "en_male_1", "speed": 1.1},
-  # new for call simulator:
-  "BILLING_REP": {"voice_id": "en_male_1", "speed": 1.0},
-  "BILLING_USER": {"voice_id": "en_male_2", "speed": 1.0},
+  # ComfortAssistant - consistent therapeutic voice
+  "COMFORT": {"voice_id": "d1f6f1777c824ba59b1df3064fc3393e", "speed": 1.0},  # user/comfort assistant
+  "BILLING_REP": {"voice_id": "b545c585f631496c914815291da4e893", "speed": 1.0},  # rep
 }
 
 
@@ -368,7 +347,7 @@ async def tts_endpoint(body: TTSRequest):
   if not FISH_AUDIO_KEY:
       return {"error": "Missing FISH_AUDIO_API_KEY in environment"}
 
-  preset = VOICE_PRESETS.get(body.mode, VOICE_PRESETS["THERAPIST"])
+  preset = VOICE_PRESETS.get(body.mode, VOICE_PRESETS["COMFORT"])
   speed = preset["speed"]
   voice_id = preset["voice_id"]
 
@@ -383,7 +362,7 @@ async def tts_endpoint(body: TTSRequest):
       "text": body.text,
       "model": "speech-1.5",
       "format": "mp3",
-      "voice_id": voice_id,
+      "reference_id": voice_id,
       "prosody": {
           "speed": speed,
           "volume": 0
@@ -459,7 +438,7 @@ async def analyze_bill(file: UploadFile = File(...)):
           if part:
               text += part + "\n"
 
-      text = text[:15000]  # safety limit
+      text = text[:15000]
 
       prompt = f"""
 You are a US medical billing expert.

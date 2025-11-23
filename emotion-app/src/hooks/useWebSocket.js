@@ -10,7 +10,6 @@ export const useWebSocket = (summary, stableEmotion) => {
   const summaryRef = useRef(summary);
   const currentMessageRef = useRef("");
 
-  // Keep refs updated
   useEffect(() => {
     summaryRef.current = summary;
   }, [summary]);
@@ -22,7 +21,6 @@ export const useWebSocket = (summary, stableEmotion) => {
   const startComfortStream = useCallback((reportSummary) => {
     if (websocket.current) websocket.current.close();
     
-    // Update summary ref with the provided summary
     if (reportSummary) {
       summaryRef.current = reportSummary;
     }
@@ -37,7 +35,6 @@ export const useWebSocket = (summary, stableEmotion) => {
       currentMessageRef.current = "";
       setIsComplete(false);
       
-      // Initialize with the summary - use a small delay to ensure connection is ready
       setTimeout(() => {
         if (websocket.current && websocket.current.readyState === WebSocket.OPEN) {
           const initMessage = {
@@ -57,14 +54,12 @@ export const useWebSocket = (summary, stableEmotion) => {
         console.log("WebSocket message received:", data.type);
         
         if (data.type === "message") {
-          // Accumulate streaming text and update ref immediately
           setCurrentMessage(prev => {
             const newMessage = prev + data.text;
             currentMessageRef.current = newMessage;
             return newMessage;
           });
         } else if (data.type === "end") {
-          // Section complete - move current message to permanent messages
           const finalMessage = currentMessageRef.current.trim();
           if (finalMessage) {
             setMessages(msgs => [...msgs, finalMessage]);
@@ -73,7 +68,6 @@ export const useWebSocket = (summary, stableEmotion) => {
           currentMessageRef.current = "";
           setProgress(data.progress || "");
         } else if (data.type === "complete") {
-          // All sections complete - move current message to permanent messages
           const finalMessage = currentMessageRef.current.trim();
           if (finalMessage) {
             setMessages(msgs => [...msgs, finalMessage]);
@@ -84,14 +78,12 @@ export const useWebSocket = (summary, stableEmotion) => {
           setIsActive(false);
         } else if (data.error) {
           console.error("WebSocket error:", data.error);
-          // Add error message to chat for user visibility
           setMessages(prev => [...prev, `⚠️ Error: ${data.error}`]);
           setCurrentMessage("");
           currentMessageRef.current = "";
           setIsActive(false);
         }
       } catch (e) {
-        // Handle non-JSON messages (legacy support)
         const text = event.data;
         if (!text.includes("[END]")) {
           setCurrentMessage(prev => {
@@ -100,7 +92,6 @@ export const useWebSocket = (summary, stableEmotion) => {
             return newMessage;
           });
         } else {
-          // Add final message
           setCurrentMessage(prev => {
             const finalMessage = prev.trim();
             if (finalMessage) {
@@ -136,7 +127,6 @@ export const useWebSocket = (summary, stableEmotion) => {
     }
   }, [stableEmotion]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (websocket.current) {
@@ -145,7 +135,6 @@ export const useWebSocket = (summary, stableEmotion) => {
     };
   }, []);
 
-  // Display the current streaming message along with completed messages
   const allMessages = currentMessage 
     ? [...messages, currentMessage]
     : messages;

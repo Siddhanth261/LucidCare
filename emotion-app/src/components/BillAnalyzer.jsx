@@ -12,7 +12,7 @@ import {
 import BillingCallSimulator from "../components/BillingCallSimulator";
 
 function BillAnalyzer() {
-  const [step, setStep] = useState("upload"); // 'upload' | 'results' | 'draft'
+  const [step, setStep] = useState("upload");
   const [file, setFile] = useState(null);
   const [analysis, setAnalysis] = useState(null);
   const [appeal, setAppeal] = useState(null);
@@ -22,7 +22,6 @@ function BillAnalyzer() {
   const [generatedEmail, setGeneratedEmail] = useState(null);
   const [emailLoading, setEmailLoading] = useState(false);
 
-  // NEW: call simulator state
   const [showCallSim, setShowCallSim] = useState(false);
   const [callScript, setCallScript] = useState([]);
   const [callLoading, setCallLoading] = useState(false);
@@ -167,7 +166,6 @@ function BillAnalyzer() {
     }
   };
 
-  // Calculate total potential savings (rough)
   const totalSavings = Array.from(selectedIssues)
     .map((index) => analysis?.potential_issues?.[index])
     .filter(Boolean)
@@ -177,11 +175,10 @@ function BillAnalyzer() {
       if (matches) {
         return sum + parseFloat(matches[0].replace("$", "").replace(",", ""));
       }
-      return sum + 50; // default estimate
+      return sum + 50;
     }, 0)
     .toFixed(2);
 
-  // NEW: practice phone call using Gemini script
   const handleStartCall = async () => {
     if (!analysis) return;
     if (!analysis.potential_issues || analysis.potential_issues.length === 0)
@@ -196,7 +193,7 @@ function BillAnalyzer() {
           ? Array.from(selectedIssues).map(
               (idx) => analysis.potential_issues[idx]
             )
-          : analysis.potential_issues.slice(0, 3); // fallback: first few issues
+          : analysis.potential_issues.slice(0, 3);
 
       const res = await fetch("http://localhost:8080/simulate-billing-call", {
         method: "POST",
@@ -227,9 +224,6 @@ function BillAnalyzer() {
     }
   };
 
-  // --------------------------------------------------
-  // STEP 1 – UPLOAD
-  // --------------------------------------------------
   if (step === "upload") {
     return (
       <div className="min-h-screen bg-slate-50 p-6 lg:p-10">
@@ -308,9 +302,6 @@ function BillAnalyzer() {
     );
   }
 
-  // --------------------------------------------------
-  // STEP 2 – RESULTS
-  // --------------------------------------------------
   if (step === "results") {
     return (
       <div className="min-h-screen bg-slate-50 p-6 lg:p-10">
@@ -328,7 +319,6 @@ function BillAnalyzer() {
           </header>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-20">
-            {/* Overview */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-3 bg-emerald-50">
                 <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
@@ -449,8 +439,7 @@ function BillAnalyzer() {
               )}
             </div>
 
-            {/* Issues */}
-            <div className="bg-white rounded-2xl border border-rose-200 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="px-5 py-4 border-b border-rose-100 flex items-center gap-3 bg-rose-50">
                 <div className="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center">
                   <XCircle className="w-4 h-4 text-rose-600" />
@@ -553,7 +542,6 @@ function BillAnalyzer() {
             </div>
           </div>
 
-          {/* Bottom action bar - made larger */}
           {analysis?.potential_issues?.some(
             (issue) => issue.can_patient_dispute
           ) && (
@@ -589,7 +577,6 @@ function BillAnalyzer() {
             </div>
           )}
 
-          {/* Practice call button - bottom right */}
           {analysis?.potential_issues?.length > 0 && (
             <button
               onClick={handleStartCall}
@@ -601,7 +588,6 @@ function BillAnalyzer() {
           )}
         </div>
 
-        {/* Call simulator modal */}
         <BillingCallSimulator
           open={showCallSim}
           onClose={() => setShowCallSim(false)}
@@ -612,9 +598,6 @@ function BillAnalyzer() {
     );
   }
 
-  // --------------------------------------------------
-  // STEP 3 – Draft appeal
-  // --------------------------------------------------
   return (
     <div className="min-h-screen bg-slate-50 p-6 lg:p-10">
       <div className="max-w-5xl mx-auto pb-24">

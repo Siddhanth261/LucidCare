@@ -11,17 +11,15 @@ import { useWebSocket } from './hooks/useWebSocket';
 import { useFileUpload } from './hooks/useFileUpload';
 
 function App() {
-  // Refs
   const videoRef = useRef();
   const canvasRef = useRef();
   
-  // State
   const [initializing, setInitializing] = useState(true);
   const [emotions, setEmotions] = useState({});
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState('dashboard'); // 'dashboard' or 'diagnostics'
+  const [currentPage, setCurrentPage] = useState('dashboard');
   
-  // Custom Hooks
+
   const { handleVideoOnPlay } = useFaceDetection(videoRef, setInitializing);
   const { stableEmotion } = useEmotionTracking(emotions);
   const { 
@@ -43,10 +41,8 @@ function App() {
 
   return (
     <div className="min-h-screen bg-white text-gray-900 font-sans">
-      {/* Menu Button */}
       <MenuButton onClick={() => setIsDrawerOpen(true)} />
 
-      {/* Drawer */}
       <Drawer 
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
@@ -54,7 +50,6 @@ function App() {
         currentPage={currentPage}
       />
 
-      {/* Page Content - Use visibility to keep components mounted */}
       <div style={{ display: currentPage === 'dashboard' ? 'block' : 'none' }}>
         <Dashboard 
           videoRef={videoRef}

@@ -12,7 +12,7 @@ function ComfortAssistant({
   onNextSection,
   progress,
   isComplete,
-  mode = "THERAPIST", // passed from parent (emotion)
+  mode = "COMFORT",
 }) {
   const messagesEndRef = useRef(null);
   const previousMessagesRef = useRef(messages);
@@ -21,7 +21,6 @@ function ComfortAssistant({
   const [isLoading, setIsLoading] = useState(false);
   const [previousMessageCount, setPreviousMessageCount] = useState(0);
 
-  // Scripted fake call conversation
   const scriptedCall = useRef([
     {
       from: "system",
@@ -82,7 +81,6 @@ function ComfortAssistant({
 
 
 
-  // ----- Existing scroll + loading logic for report explanation -----
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -95,16 +93,15 @@ function ComfortAssistant({
     setPreviousMessageCount(messages.length);
   }, [messages, previousMessageCount]);
 
-  // Play TTS for normal assistant messages
   useEffect(() => {
     if (messages.length > previousMessagesRef.current.length) {
       const latestMsg = messages[messages.length - 1];
       if (latestMsg) {
-        speak(latestMsg, mode);
+        speak(latestMsg, "COMFORT");
       }
     }
     previousMessagesRef.current = messages;
-  }, [messages, mode, speak]);
+  }, [messages, speak]);
 
   const handleNextSection = () => {
     setIsLoading(true);
@@ -113,7 +110,6 @@ function ComfortAssistant({
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col h-full overflow-hidden">
-      {/* Chat Header */}
       <div className="bg-gray-900 p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -140,7 +136,6 @@ function ComfortAssistant({
         </div>
       </div>
 
-      {/* Chat Messages */}
       <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-gray-800">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
@@ -195,7 +190,6 @@ function ComfortAssistant({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Chat Footer */}
       <div className="p-4 border-t border-gray-200 bg-white">
         {isActive && !isComplete && messages.length > 0 && (
           <button

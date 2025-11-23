@@ -3,9 +3,6 @@ import {
   Bot,
   ChevronRight,
   Loader2,
-  Phone,
-  PhoneOff,
-  PhoneCall,
 } from "lucide-react";
 import { useTTS } from "../hooks/useTTS";
 
@@ -23,12 +20,6 @@ function ComfortAssistant({
 
   const [isLoading, setIsLoading] = useState(false);
   const [previousMessageCount, setPreviousMessageCount] = useState(0);
-
-  // ---- NEW: Fake call state ----
-  const [callStatus, setCallStatus] = useState("idle"); // idle | dialing | in_call | ended
-  const [callTranscript, setCallTranscript] = useState([]); // {from: 'rep'|'you'|'system', text: string}
-  const callTimeoutRef = useRef(null);
-  const callStatusRef = useRef(callStatus);
 
   // Scripted fake call conversation
   const scriptedCall = useRef([
@@ -89,77 +80,7 @@ function ComfortAssistant({
     },
   ]);
 
-  // Keep a ref of callStatus to avoid stale closures in timeouts
-  useEffect(() => {
-    callStatusRef.current = callStatus;
-  }, [callStatus]);
 
-  const clearCallTimeout = () => {
-    if (callTimeoutRef.current) {
-      clearTimeout(callTimeoutRef.current);
-      callTimeoutRef.current = null;
-    }
-  };
-
-  const playCallTurn = (index) => {
-    const script = scriptedCall.current;
-    if (index >= script.length || callStatusRef.current === "ended") {
-      setCallStatus("ended");
-      clearCallTimeout();
-      return;
-    }
-
-    const turn = script[index];
-
-    setCallTranscript((prev) => [...prev, turn]);
-
-    // Speak only the billing rep's lines
-    if (turn.from === "rep" && turn.text) {
-      speak(turn.text, "LAWYER");
-    }
-
-    if (turn.delay > 0) {
-      callTimeoutRef.current = setTimeout(() => {
-        // Only continue if call wasn't ended manually
-        if (callStatusRef.current !== "ended") {
-          setCallStatus("in_call");
-          playCallTurn(index + 1);
-        }
-      }, turn.delay);
-    } else {
-      // Last turn (no delay)
-      setCallStatus("ended");
-    }
-  };
-
-  const handleStartCall = () => {
-    clearCallTimeout();
-    setCallTranscript([]);
-    setCallStatus("dialing");
-    // Start scripted call after a short delay
-    callTimeoutRef.current = setTimeout(() => {
-      if (callStatusRef.current === "dialing") {
-        playCallTurn(0);
-      }
-    }, 300);
-  };
-
-  const handleEndCall = () => {
-    clearCallTimeout();
-    setCallStatus("ended");
-    setCallTranscript((prev) =>
-      prev.some((p) => p.text === "Call manually ended.")
-        ? prev
-        : [...prev, { from: "system", text: "Call manually ended." }]
-    );
-  };
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      clearCallTimeout();
-    };
-  }, []);
 
   // ----- Existing scroll + loading logic for report explanation -----
   const scrollToBottom = () => {
@@ -189,16 +110,6 @@ function ComfortAssistant({
     setIsLoading(true);
     onNextSection();
   };
-
-  // Helper for call status label
-  const callStatusLabel =
-    callStatus === "idle"
-      ? "No call in progress"
-      : callStatus === "dialing"
-      ? "Calling billing office..."
-      : callStatus === "in_call"
-      ? "In call with billing representative"
-      : "Call finished";
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col h-full overflow-hidden">
@@ -282,80 +193,6 @@ function ComfortAssistant({
           </>
         )}
         <div ref={messagesEndRef} />
-      </div>
-
-      {/* NEW: Simulated Call Panel */}
-      <div className="border-t border-gray-200 bg-gray-50 px-4 py-3">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-full bg-gray-900 text-white">
-                {callStatus === "in_call" || callStatus === "dialing" ? (
-                  <PhoneCall size={14} />
-                ) : (
-                  <Phone size={14} />
-                )}
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-gray-800">
-                  Simulated Call with Billing Office
-                </p>
-                <p className="text-[11px] text-gray-500">{callStatusLabel}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {(callStatus === "in_call" || callStatus === "dialing") && (
-                <button
-                  type="button"
-                  onClick={handleEndCall}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
-                >
-                  <PhoneOff size={12} />
-                  End Call
-                </button>
-              )}
-
-              {(callStatus === "idle" || callStatus === "ended") && (
-                <button
-                  type="button"
-                  onClick={handleStartCall}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-gray-900 text-white hover:bg-gray-800 transition-colors"
-                >
-                  <PhoneCall size={12} />
-                  Start Call
-                </button>
-              )}
-            </div>
-          </div>
-
-          {callTranscript.length > 0 && (
-            <div className="mt-1 max-h-40 overflow-y-auto rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs space-y-2">
-              {callTranscript.map((turn, idx) => (
-                <div key={idx} className="flex gap-2">
-                  <span
-                    className={`mt-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-                      turn.from === "rep"
-                        ? "text-blue-700"
-                        : turn.from === "you"
-                        ? "text-gray-700"
-                        : "text-gray-400"
-                    }`}
-                  >
-                    {turn.from === "rep"
-                      ? "Billing Rep"
-                      : turn.from === "you"
-                      ? "You"
-                      : "System"}
-                  </span>
-                  <p className="text-[11px] text-gray-700 leading-snug">
-                    {turn.text}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
 
       {/* Chat Footer */}

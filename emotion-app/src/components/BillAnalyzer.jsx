@@ -315,7 +315,7 @@ function BillAnalyzer() {
     return (
       <div className="min-h-screen bg-slate-50 p-6 lg:p-10">
         <div className="max-w-6xl mx-auto">
-          <header className="mb-6 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <header className="mb-6">
             <div>
               <h1 className="text-3xl font-bold text-slate-900">
                 Bill Analysis
@@ -325,16 +325,6 @@ function BillAnalyzer() {
                 contestable.
               </p>
             </div>
-
-            {analysis?.potential_issues?.length > 0 && (
-              <button
-                onClick={handleStartCall}
-                disabled={callLoading}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {callLoading ? "Preparing call..." : "Practice phone call"}
-              </button>
-            )}
           </header>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-20">
@@ -563,30 +553,30 @@ function BillAnalyzer() {
             </div>
           </div>
 
-          {/* Bottom action bar */}
+          {/* Bottom action bar - made larger */}
           {analysis?.potential_issues?.some(
             (issue) => issue.can_patient_dispute
           ) && (
-            <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-white shadow-xl border border-slate-200 rounded-full px-6 py-3 flex items-center gap-6 max-w-full z-50">
+            <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-white shadow-xl border border-slate-200 rounded-full px-8 py-4 flex items-center gap-8 max-w-full z-50">
               <div>
-                <div className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold">
+                <div className="text-xs uppercase tracking-wide text-slate-500 font-semibold">
                   Charges under review
                 </div>
-                <div className="text-lg font-semibold text-emerald-600">
+                <div className="text-xl font-semibold text-emerald-600">
                   ${totalSavings}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <button
                   onClick={resetAnalysis}
-                  className="text-xs px-3 py-2 rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50"
+                  className="text-sm px-4 py-2 rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50"
                 >
                   Reset Analysis
                 </button>
                 <button
                   onClick={generateDisputeEmail}
                   disabled={selectedIssues.size === 0 || emailLoading}
-                  className={`text-xs px-4 py-2 rounded-full flex items-center gap-1 ${
+                  className={`text-sm px-5 py-2 rounded-full flex items-center gap-2 ${
                     selectedIssues.size === 0 || emailLoading
                       ? "bg-slate-200 text-slate-500 cursor-not-allowed"
                       : "bg-slate-900 text-white hover:bg-slate-800"
@@ -597,6 +587,17 @@ function BillAnalyzer() {
                 </button>
               </div>
             </div>
+          )}
+
+          {/* Practice call button - bottom right */}
+          {analysis?.potential_issues?.length > 0 && (
+            <button
+              onClick={handleStartCall}
+              disabled={callLoading}
+              className="fixed bottom-4 right-4 inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed shadow-lg z-50"
+            >
+              {callLoading ? "Preparing call..." : "Simulate call"}
+            </button>
           )}
         </div>
 

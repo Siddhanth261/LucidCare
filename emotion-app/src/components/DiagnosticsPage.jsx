@@ -9,9 +9,6 @@ function DiagnosticsPage({ file, onFileUpload, summary, isAnalyzing }) {
         {/* Page Header */}
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-3">
-            <div className="p-3 bg-gray-900 rounded-lg">
-              <FileText size={28} className="text-white" />
-            </div>
             <div>
               <h1 className="text-3xl font-semibold text-gray-900">Medical Diagnostics</h1>
               <p className="text-gray-600 mt-1">AI-powered medical report analysis and insights</p>
@@ -22,7 +19,6 @@ function DiagnosticsPage({ file, onFileUpload, summary, isAnalyzing }) {
         {/* File Upload Section */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 mb-6">
           <div className="flex items-center gap-2 mb-5">
-            <div className="w-1 h-7 bg-gray-400 rounded-full"></div>
             <h2 className="text-xl font-semibold text-gray-800">Upload Medical Report</h2>
           </div>
           <div className="flex items-center gap-4 flex-wrap">
@@ -45,7 +41,6 @@ function DiagnosticsPage({ file, onFileUpload, summary, isAnalyzing }) {
         {/* Diagnostics Results Section */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
           <div className="flex items-center gap-2 mb-6">
-            <div className="w-1 h-7 bg-gray-400 rounded-full"></div>
             <h2 className="text-xl font-semibold text-gray-800">Analysis Results</h2>
           </div>
           

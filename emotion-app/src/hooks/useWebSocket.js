@@ -57,22 +57,26 @@ export const useWebSocket = (summary, stableEmotion) => {
         console.log("WebSocket message received:", data.type);
         
         if (data.type === "message") {
-          // Accumulate streaming text
-          setCurrentMessage(prev => prev + data.text);
+          // Accumulate streaming text and update ref immediately
+          setCurrentMessage(prev => {
+            const newMessage = prev + data.text;
+            currentMessageRef.current = newMessage;
+            return newMessage;
+          });
         } else if (data.type === "end") {
-          // Section complete - add accumulated message to messages array
+          // Section complete - move current message to permanent messages
           const finalMessage = currentMessageRef.current.trim();
           if (finalMessage) {
-            setMessages(prev => [...prev, finalMessage]);
+            setMessages(msgs => [...msgs, finalMessage]);
           }
           setCurrentMessage("");
           currentMessageRef.current = "";
           setProgress(data.progress || "");
         } else if (data.type === "complete") {
-          // All sections complete - add final message if any
+          // All sections complete - move current message to permanent messages
           const finalMessage = currentMessageRef.current.trim();
           if (finalMessage) {
-            setMessages(prev => [...prev, finalMessage]);
+            setMessages(msgs => [...msgs, finalMessage]);
           }
           setCurrentMessage("");
           currentMessageRef.current = "";
@@ -90,15 +94,21 @@ export const useWebSocket = (summary, stableEmotion) => {
         // Handle non-JSON messages (legacy support)
         const text = event.data;
         if (!text.includes("[END]")) {
-          setCurrentMessage(prev => prev + text);
+          setCurrentMessage(prev => {
+            const newMessage = prev + text;
+            currentMessageRef.current = newMessage;
+            return newMessage;
+          });
         } else {
           // Add final message
-          const finalMessage = currentMessageRef.current.trim();
-          if (finalMessage) {
-            setMessages(prev => [...prev, finalMessage]);
-          }
-          setCurrentMessage("");
-          currentMessageRef.current = "";
+          setCurrentMessage(prev => {
+            const finalMessage = prev.trim();
+            if (finalMessage) {
+              setMessages(msgs => [...msgs, finalMessage]);
+            }
+            currentMessageRef.current = "";
+            return "";
+          });
         }
       }
     };

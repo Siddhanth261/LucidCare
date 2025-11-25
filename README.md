@@ -7,7 +7,7 @@
 ## 🚀 **Overview**
 
 > Medical bills and reports are scary. **LucidCare makes them simple.**
-> It explains your report warmly, understands your emotions, finds billing errors, drafts your dispute letter, and even practices a realistic phone call with you—using natural, consistent AI voices.
+> It explains your report warmly, understands your emotions anc changes its behavior based on that, finds billing errors, drafts your dispute letter, and even practices a realistic phone call with you—using natural, consistent AI voices.
 
 LucidCare can:
 
